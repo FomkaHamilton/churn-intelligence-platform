@@ -50,8 +50,16 @@ class SHAPExplainer:
         explainer = shap.TreeExplainer(model)
         raw = explainer.shap_values(X_arr.values)
 
-        # Binary classification may return a list [class0_shap, class1_shap]
-        sv = raw[1] if isinstance(raw, list) else raw
+        # Binary classification can return:
+        #   list [class0, class1]             — older SHAP
+        #   ndarray (n, features, n_classes)  — newer SHAP
+        #   ndarray (n, features)             — single output
+        if isinstance(raw, list):
+            sv = raw[1]
+        elif isinstance(raw, np.ndarray) and raw.ndim == 3:
+            sv = raw[:, :, 1]
+        else:
+            sv = raw
 
         mean_abs = np.abs(sv).mean(axis=0)
         importance = (

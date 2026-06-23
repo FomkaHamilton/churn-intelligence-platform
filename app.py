@@ -42,6 +42,9 @@ from src.visualization.predictions import (
     render_shap_importance,
 )
 from src.visualization.forecasting import render_forecast_chart, render_forecast_metrics
+from src.insights.factory import get_insight_client
+from src.insights.models import InsightData
+from src.visualization.insights import render_insights_page
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 _settings = get_settings()
@@ -209,7 +212,7 @@ if "🏠" in (page or ""):
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Version", _settings.app_version)
-    col2.metric("Build Phase", "5 / 9")
+    col2.metric("Build Phase", "6 / 9")
     col3.metric("Churn Window", f"{st.session_state['churn_window_days']}d")
     col4.metric("AI Mode", "Live" if _settings.has_ai_provider else "Template")
 
@@ -221,7 +224,7 @@ if "🏠" in (page or ""):
         "🤖 Churn Prediction": ("ML risk scoring with SHAP explainability", "✅ Phase 4 — Live"),
         "💰 CLV Modeling": ("Survival-analysis-based customer lifetime value", "✅ Phase 4 — Live"),
         "🔮 Revenue Forecasting": ("12-month subscriber and revenue forecasts", "✅ Phase 5 — Live"),
-        "💡 AI Insights": ("Executive summaries and intervention recommendations", "🔄 Phase 6"),
+        "💡 AI Insights": ("Executive summaries and intervention recommendations", "✅ Phase 6 — Live"),
     }
     for feature, (desc, status) in capabilities.items():
         c1, c2, c3 = st.columns([2, 4, 2])
@@ -596,6 +599,78 @@ elif "🔮" in (page or ""):
                 "Try the sample dataset (Load sample dataset button on the Upload page).",
                 icon="💡",
             )
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE: INSIGHTS
+# ─────────────────────────────────────────────────────────────────────────────
+elif "💡" in (page or ""):
+    st.title("💡 AI Insights")
+    st.markdown("*Plain-language analysis of your subscription data — no jargon required.*")
+
+    df = st.session_state.get("clean_df")
+    if df is None or len(df) == 0:
+        st.info("Upload data and run the Analytics page first.", icon="📤")
+    else:
+        churn_window = int(st.session_state["churn_window_days"])
+        model_results = st.session_state.get("model_results")
+
+        # Compute analytics layer (cached)
+        with st.spinner("Assembling insights…"):
+            kpi_ts = _compute_kpis(df)
+            rfm_result = _compute_rfm(df)
+            label_result = _compute_churn_labels(df, churn_window)
+            cohort_result = _compute_cohort(df)
+
+        if rfm_result is None:
+            st.warning(
+                "Not enough customers to generate insights. "
+                "At least 50 unique customers are required.",
+                icon="⚠️",
+            )
+        else:
+            # ── Assemble InsightData ───────────────────────────────────────
+            insight_data = InsightData(
+                kpi_snapshot=kpi_ts.snapshot,
+                kpi_ts=kpi_ts,
+                churn_label_result=label_result,
+                rfm_result=rfm_result,
+                churn_window_days=churn_window,
+                cohort_result=cohort_result,
+                model_metrics=model_results["metrics"] if model_results else None,
+                shap_result=model_results["shap"] if model_results else None,
+                segments=model_results["segments"] if model_results else None,
+                clv_result=model_results["clv"] if model_results else None,
+            )
+
+            # Run forecast if not already in session state
+            try:
+                from src.forecasting.pipeline import ForecastingPipeline
+                from src.config.settings import get_yaml_config
+
+                yaml_cfg = get_yaml_config()
+                _fc_backend = yaml_cfg.get("forecasting", {}).get("backend", "statsmodels")
+                _fc_horizon = int(yaml_cfg.get("forecasting", {}).get("horizon_months", 12))
+
+                @st.cache_data
+                def _run_insight_forecast(df: pd.DataFrame, horizon: int, backend: str):
+                    return ForecastingPipeline().run(df, horizon_months=horizon, backend=backend)
+
+                insight_data.forecast_bundle = _run_insight_forecast(df, _fc_horizon, _fc_backend)
+            except Exception:
+                pass  # Forecast is optional — insights still render without it
+
+            # ── Generate & cache report ────────────────────────────────────
+            cache_key = "insights_report"
+            regen = st.button("🔄 Regenerate Insights", type="secondary")
+            if regen or cache_key not in st.session_state:
+                with st.spinner("Generating insights…"):
+                    client = get_insight_client(
+                        anthropic_api_key=_settings.anthropic_api_key,
+                        openai_api_key=_settings.openai_api_key,
+                    )
+                    st.session_state[cache_key] = client.generate(insight_data)
+
+            render_insights_page(st.session_state[cache_key])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGES: COMING IN LATER PHASES

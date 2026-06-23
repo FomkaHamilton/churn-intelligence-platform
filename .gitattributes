@@ -1,0 +1,20 @@
+# Normalise line endings to LF on commit (cross-platform consistency)
+* text=auto eol=lf
+
+# Force LF for files that must not have CRLF
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.toml  text eol=lf
+*.txt   text eol=lf
+Makefile text eol=lf
+Dockerfile text eol=lf
+
+# Binary — never touch line endings
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.ico   binary
+*.pkl   binary
+*.joblib binary

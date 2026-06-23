@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Churn Intelligence Platform — .gitignore
+# This is a PUBLIC repository. Nothing sensitive should ever be committed.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+MANIFEST
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.env
+.venv/
+venv/
+ENV/
+env/
+# Keep the example — never the real file
+!.env.example
+
+# ── IDE & editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Testing & coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# ── Type checking ─────────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Data — CRITICAL: real user data must never be committed ──────────────────
+data/raw/*
+data/processed/*
+data/sessions/*
+# Preserve directory structure with .gitkeep sentinels
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/sessions/.gitkeep
+# Sample data IS committed (synthetic only — no real PII)
+!data/sample/
+
+# ── Trained model artifacts ───────────────────────────────────────────────────
+# Models are excluded: they can encode training data distributions
+models/
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Streamlit local config ────────────────────────────────────────────────────
+.streamlit/secrets.toml
+
+# ── Local config overrides (keep base config, exclude local overrides) ────────
+config/settings.local.yaml

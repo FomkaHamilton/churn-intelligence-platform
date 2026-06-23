@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Churn Intelligence Platform — Optional Dependencies
+#
+# Prophet forecasting backend.
+# Requires a C++ compiler at install time via PyStan.
+#
+# Windows:  Install Visual Studio Build Tools first
+#           https://visualstudio.microsoft.com/visual-cpp-build-tools/
+# macOS:    brew install gcc
+# Linux:    sudo apt-get install build-essential
+#
+# Then: pip install -r requirements-optional.txt
+#
+# Enable in config/settings.yaml:
+#   forecasting:
+#     backend: "prophet"
+# ─────────────────────────────────────────────────────────────────────────────
+
+prophet>=1.1.5

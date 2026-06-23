@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Churn Intelligence Platform — Application Configuration
+# Override via environment variables (see .env.example) or
+# create config/settings.local.yaml (gitignored) for local overrides.
+# ─────────────────────────────────────────────────────────────────────────────
+
+app:
+  name: "Churn Intelligence Platform"
+  version: "0.1.0"
+  max_upload_size_mb: 50
+  log_level: "INFO"
+
+churn:
+  window_days: 90
+  configurable_windows: [30, 60, 90, 120]
+
+modeling:
+  test_size: 0.20
+  random_state: 42
+  cv_folds: 5
+  logistic_regression:
+    max_iter: 1000
+    class_weight: "balanced"
+    solver: "lbfgs"
+  random_forest:
+    n_estimators: 200
+    max_depth: 10
+    min_samples_leaf: 5
+    class_weight: "balanced"
+  xgboost:
+    enabled: false
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.05
+    scale_pos_weight: "auto"
+
+forecasting:
+  horizon_months: 12
+  backend: "statsmodels"
+  confidence_interval: 0.95
+  seasonal_periods: 12
+
+clv:
+  discount_rate: 0.10
+  time_horizon_months: 24
+  use_survival_analysis: true
+
+segmentation:
+  high_value_percentile: 80
+  new_customer_months: 3
+  at_risk_recency_days: 45
+
+data_quality:
+  max_future_date_days: 1
+  min_transaction_amount: 0.0
+  max_duplicate_pct: 5.0
+
+database:
+  url: "sqlite:///data/sessions/sip.db"
+  session_expiry_days: 30

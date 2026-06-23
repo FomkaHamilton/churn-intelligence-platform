@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Churn Intelligence Platform — Core Dependencies
+# Install: pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+streamlit>=1.35.0
+
+# ── Data Processing ───────────────────────────────────────────────────────────
+pandas>=2.2.0
+numpy>=1.26.0
+openpyxl>=3.1.0        # XLSX read/write
+xlrd>=2.0.1            # Legacy XLS support
+
+# ── Machine Learning ──────────────────────────────────────────────────────────
+scikit-learn>=1.5.0
+shap>=0.45.0           # Feature explainability
+
+# ── Survival Analysis & CLV ───────────────────────────────────────────────────
+lifelines>=0.28.0      # Kaplan-Meier + BG/NBD CLV modeling
+
+# ── Forecasting ───────────────────────────────────────────────────────────────
+statsmodels>=0.14.0    # Holt-Winters exponential smoothing (default backend)
+# Prophet is in requirements-optional.txt — install separately if needed
+
+# ── Visualization ─────────────────────────────────────────────────────────────
+plotly>=5.22.0
+
+# ── Configuration & Settings ──────────────────────────────────────────────────
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+python-dotenv>=1.0.0
+PyYAML>=6.0.1
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+structlog>=24.2.0
+
+# ── Database (session persistence) ───────────────────────────────────────────
+sqlalchemy>=2.0.0
+
+# ── AI Insight Layer ──────────────────────────────────────────────────────────
+# Both are optional at runtime — the platform works without API keys.
+# Remove either line if you don't plan to use that provider.
+anthropic>=0.28.0
+openai>=1.30.0

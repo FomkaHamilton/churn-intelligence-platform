@@ -41,6 +41,7 @@ from src.visualization.predictions import (
     render_segment_distribution,
     render_shap_importance,
 )
+from src.visualization.forecasting import render_forecast_chart, render_forecast_metrics
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 _settings = get_settings()
@@ -208,7 +209,7 @@ if "🏠" in (page or ""):
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Version", _settings.app_version)
-    col2.metric("Build Phase", "4 / 9")
+    col2.metric("Build Phase", "5 / 9")
     col3.metric("Churn Window", f"{st.session_state['churn_window_days']}d")
     col4.metric("AI Mode", "Live" if _settings.has_ai_provider else "Template")
 
@@ -219,7 +220,7 @@ if "🏠" in (page or ""):
         "📈 Cohort Analytics": ("Retention matrices, MRR, ARPU, churn rate", "✅ Phase 3 — Live"),
         "🤖 Churn Prediction": ("ML risk scoring with SHAP explainability", "✅ Phase 4 — Live"),
         "💰 CLV Modeling": ("Survival-analysis-based customer lifetime value", "✅ Phase 4 — Live"),
-        "🔮 Revenue Forecasting": ("12-month subscriber and revenue forecasts", "🔄 Phase 5"),
+        "🔮 Revenue Forecasting": ("12-month subscriber and revenue forecasts", "✅ Phase 5 — Live"),
         "💡 AI Insights": ("Executive summaries and intervention recommendations", "🔄 Phase 6"),
     }
     for feature, (desc, status) in capabilities.items():
@@ -537,6 +538,64 @@ elif "🤖" in (page or ""):
             if st.button("🔄 Retrain Model", type="secondary"):
                 st.session_state.pop("model_results", None)
                 st.rerun()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE: FORECASTING
+# ─────────────────────────────────────────────────────────────────────────────
+elif "🔮" in (page or ""):
+    from src.forecasting.pipeline import ForecastingPipeline
+    from src.config.settings import get_yaml_config
+
+    st.title("🔮 Forecasting")
+    st.markdown("*12-month revenue and subscriber projections with confidence intervals.*")
+
+    df = st.session_state.get("clean_df")
+    if df is None or len(df) == 0:
+        st.info("Upload data first to run forecasts.", icon="📤")
+    else:
+        yaml_cfg = get_yaml_config()
+        backend = yaml_cfg.get("forecasting", {}).get("backend", "statsmodels")
+        horizon = int(yaml_cfg.get("forecasting", {}).get("horizon_months", 12))
+
+        @st.cache_data
+        def _run_forecast(df: pd.DataFrame, horizon: int, backend: str):
+            return ForecastingPipeline().run(df, horizon_months=horizon, backend=backend)
+
+        try:
+            with st.spinner("Running forecast…"):
+                bundle = _run_forecast(df, horizon, backend)
+
+            render_forecast_metrics(bundle.revenue, bundle.subscribers)
+
+            st.divider()
+            st.markdown("#### Revenue Forecast")
+            render_forecast_chart(
+                bundle.revenue,
+                color="#4F8EF7",
+                y_prefix="$",
+            )
+
+            st.divider()
+            st.markdown("#### Subscriber Forecast")
+            render_forecast_chart(
+                bundle.subscribers,
+                color="#34D399",
+                y_suffix=" subs",
+            )
+
+            st.divider()
+            st.caption(
+                f"Backend: **{backend}** · Horizon: **{horizon} months** · "
+                "Change backend in `config/settings.yaml` → `forecasting.backend`"
+            )
+
+        except Exception as exc:
+            st.error(f"**Forecasting failed:** {exc}", icon="⚠️")
+            st.info(
+                "Forecasting requires at least 6 months of transaction history. "
+                "Try the sample dataset (Load sample dataset button on the Upload page).",
+                icon="💡",
+            )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGES: COMING IN LATER PHASES

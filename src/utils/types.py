@@ -12,7 +12,7 @@ import pandas as pd
 
 # ── DataFrame aliases ─────────────────────────────────────────────────────────
 DataFrame: TypeAlias = pd.DataFrame
-Series: TypeAlias = pd.Series[Any]
+Series: TypeAlias = pd.Series  # type: ignore[type-arg]
 
 # ── Domain ID types ───────────────────────────────────────────────────────────
 CustomerID: TypeAlias = str

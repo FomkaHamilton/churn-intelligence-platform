@@ -14,7 +14,7 @@ def _base_df(n: int = 5) -> pd.DataFrame:
         {
             "customer_id": [f"C{i}" for i in range(n)],
             "transaction_date": pd.to_datetime(
-                [date(2024, 1, i + 1) for i in range(n)]
+                [date(2024, 1, 1) + timedelta(days=i) for i in range(n)]
             ),
             "transaction_amount": [99.0] * n,
         }

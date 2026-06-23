@@ -11,17 +11,17 @@
 
 ## What this is
 
-Most analytics tools stop at reporting — they tell you what happened. This platform goes further, answering questions that drive business action:
+Most analytics tools stop at reporting — they tell you what happened. This platform goes further, answering the questions that drive business action:
 
 > *"Which customers are about to leave, how much future revenue is at risk, why are they leaving, and what should we do about it?"*
 
-It is a full-stack analytics and machine learning platform built as a public portfolio project. Every line of code in this repository follows production engineering standards — typed, tested, linted, and containerised — to demonstrate what a Senior Analytics Engineer builds when they sit down to solve a real retention problem.
+It is a full-stack analytics and machine learning platform built as a public portfolio project. Every line of code follows production engineering standards — typed, tested, linted, and containerised — to demonstrate what a Senior Analytics Engineer builds when sitting down to solve a real retention problem.
 
 ---
 
 ## For non-technical readers — what was built and why
 
-This section explains each phase of the project in plain language, so anyone reviewing this portfolio can understand what problem was solved and what skill it demonstrates.
+This section explains each completed phase in plain language so anyone reviewing this portfolio can understand what problem was solved and what skill it demonstrates.
 
 ---
 
@@ -49,7 +49,7 @@ A business uploads a CSV or Excel file of transaction records. This phase built 
 - **Schema normalisation** — intelligently maps common column name variants (`revenue`, `amount`, `order_date`, `user_id`) to the internal standard so users don't need to rename their files
 - **Date format detection** — automatically detects whether dates are American (MM/DD/YYYY), European (DD/MM/YYYY), or ISO format, and asks the user to confirm when it's ambiguous
 - **Data quality checks** — identifies null values, future dates, negative amounts, and duplicate records, each flagged with a severity level (error, warning, or info)
-- **Sample data generator** — creates a realistic 10,000-customer synthetic dataset for demo purposes, with a built-in churn model that targets realistic AUC scores (0.78–0.85)
+- **Sample data generator** — creates a realistic 2,000-customer synthetic dataset for demo purposes, with a built-in churn lifecycle that produces credible model AUC scores
 
 **Why it matters:** Garbage in, garbage out. A machine learning model trained on bad data produces wrong predictions. This layer ensures analysts can trust what flows into the system.
 
@@ -77,19 +77,19 @@ This phase moves from "describing what happened" to "predicting what will happen
 
 - **Temporal Train/Test Split** — A custom `TimeSeriesChurnSplit` class splits the customer population by when they first joined: older customers train the model, newer customers test it. This mirrors real-world deployment — you train on historical data and score new customers. A standard random split would be incorrect here because newer customers could accidentally inform the model's training, a form of data leakage.
 - **Churn Prediction Model** — An ensemble of two algorithms: Logistic Regression (interpretable, well-calibrated probabilities) and Random Forest (captures non-linear patterns). Both use `class_weight='balanced'` to handle the typical 10–25% churn rate without over-predicting the majority class. The final score is the average of both models.
-- **SHAP Explainability** — For every prediction, SHAP (SHapley Additive exPlanations) values explain *why* the model scored a customer as high risk. This is critical for business adoption — stakeholders need to trust and understand predictions, not just receive a black-box score.
-- **Kaplan-Meier CLV** — Customer Lifetime Value is estimated using survival analysis (the same statistical technique used in medical research to model "time to event"). This produces a realistic expected remaining lifetime for each customer, which is multiplied by their spending rate to get a dollar CLV estimate.
+- **SHAP Explainability** — For every prediction, SHAP (SHapley Additive exPlanations) values explain *why* the model scored a customer as high risk. This is critical for business adoption — stakeholders need to trust and understand predictions, not just receive a black-box score. Days-since-last-purchase tends to rank highest in SHAP importance because the churn definition itself is based on inactivity — this is by design, not a bug.
+- **Kaplan-Meier CLV** — Customer Lifetime Value is estimated using survival analysis (the same statistical technique used in medical research to model "time to event"). This produces a realistic expected remaining lifetime for each customer, which is multiplied by their spending rate to get a dollar CLV estimate. Crucially, active customers who have reached the median lifetime floor at a minimum of one month remaining — not zero — because reaching the median just means they're survivors, not that they're about to leave.
 - **Customer Segmentation** — Every customer is assigned to one of five segments (New, Healthy, At Risk, High Value, Churned) based on their churn probability and spending, with a recency-based fallback when no model has been trained yet.
-- **Predictions Dashboard Page** — A "Train Model" button triggers the full pipeline, then displays the ROC curve, SHAP feature importance chart, a table of the 20 highest-risk customers, a segment distribution donut chart, and CLV summary cards.
+- **Predictions Dashboard Page** — A "Train Model" button triggers the full pipeline, then displays the ROC curve, SHAP feature importance chart, a table of the 20 highest-risk customers, a segment distribution donut chart, and CLV summary cards. A privacy notice appears if customer IDs look like email addresses.
 
 **Why it matters:** This is the core deliverable. Predicting churn with a well-engineered, explainable model — and presenting it clearly — is the difference between an analyst role and a data scientist role.
 
 ---
 
-### Phase 5 — The Forecasting Layer *(in progress)*
+### Phase 5 — The Forecasting Layer
 **What it is:** Projecting future revenue and subscriber counts 12 months ahead.
 
-Knowing who churned is useful. Knowing how much revenue the business will generate next quarter is what the CFO needs for planning. This phase will build a time-series forecasting system that:
+Knowing who churned is useful. Knowing how much revenue the business will generate next quarter is what the CFO needs for planning. This phase built a time-series forecasting system that:
 
 - Projects monthly revenue and subscriber counts 12 months forward
 - Produces confidence intervals (the forecast band the business should plan within)
@@ -98,12 +98,25 @@ Knowing who churned is useful. Knowing how much revenue the business will genera
 
 ---
 
-### Phases 6–9 — What's coming
+### Phase 6 — The AI Insight Layer
+**What it is:** Converting raw analytics into a plain-language executive briefing.
+
+Instead of leaving analysts to interpret charts and numbers themselves, this phase generates a structured written summary of the business's retention health. The report covers five areas: business health overview, churn driver analysis, revenue outlook, customer segment breakdown, and specific recommended actions — all written in plain English with concrete numbers.
+
+- **Template mode (free)** — Uses conditional logic and the actual computed values (churn rate, top SHAP feature, forecast totals, at-risk count) to generate a factual, non-generic briefing. Works with no external API key.
+- **AI mode (optional)** — Add `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to `.env` to have Claude or GPT write the narrative sections. The same data flows in; the language becomes more fluent.
+- **Factory pattern** — `get_insight_client()` selects the right backend automatically based on available credentials. Switching from template to AI mode requires only adding an environment variable.
+- **Automatic cache invalidation** — The insights report resets whenever new data is uploaded or the model is retrained, so users always see analysis that matches the current state of the data.
+
+**Why it matters:** Most dashboards require the reader to synthesise the story themselves. This phase demonstrates building a system that closes the loop between data and decision, which is the direction analytics tooling is moving.
+
+---
+
+### Phases 7–9 — What's coming
 
 | Phase | Plain-English Summary |
 |---|---|
-| **6 — AI Insights** | Feed the model results into Claude or GPT and get a written executive briefing: "Revenue at risk is $X. The top driver is Y. Recommended action: Z." Works with or without an API key (template fallback). |
-| **7 — Full Dashboard** | Polish all eight pages into a cohesive product experience with navigation state management and export capabilities. |
+| **7 — Full Dashboard** | Polish all pages into a cohesive product experience with navigation state management and export capabilities (CSV/PDF). |
 | **8 — Hardening** | Push test coverage above 80%, add integration tests that run the full pipeline end-to-end, and profile performance on large datasets. |
 | **9 — Portfolio Polish** | Architecture diagrams, annotated screenshots, a project walkthrough doc, and a live demo link. |
 
@@ -148,14 +161,14 @@ cp .env.example .env           # optional: add ANTHROPIC_API_KEY or OPENAI_API_K
 streamlit run app.py
 ```
 
-**Generate sample data**
+The app includes a **Load sample dataset** button on the Upload page — click it to explore the full platform with 22,000+ realistic synthetic transactions immediately, no file needed.
+
+To regenerate the sample data:
 
 ```bash
 python data/sample/generator.py
-# creates data/sample/subscriptions_sample.csv (~10 k realistic records)
+# creates data/sample/subscriptions_sample.csv (~22k rows, 2,000 customers)
 ```
-
-The app also has a **Load sample dataset** button on the Upload page so you can explore without any files.
 
 ---
 
@@ -222,14 +235,14 @@ Any value can be overridden via environment variable (e.g. `CHURN_WINDOW_DAYS=60
                        │
          ┌─────────────▼─────────────┐
          │       Data Layer          │
-         │  ingestion/  ──► CSV/XLSX │
+         │  ingestion/  ---> CSV/XLSX│
          │  preprocessing/           │
-         │  database/ ──► SQLite     │
+         │  database/ ---> SQLite    │
          └─────────────┬─────────────┘
                        │
          ┌─────────────▼─────────────┐
          │      AI Insight Layer     │
-         │  Claude │ OpenAI │ Template│
+         │  Claude | OpenAI | Template│
          └───────────────────────────┘
 ```
 
@@ -256,12 +269,12 @@ churn-intelligence-platform/
 │   ├── analytics/            # cohort retention, KPI calculations
 │   ├── modeling/             # churn model, CLV, segmentation, SHAP
 │   ├── forecasting/          # time-series forecasting backends
-│   ├── insights/             # LLM insight generation (Phase 6)
+│   ├── insights/             # AI insight generation (Phase 6)
 │   ├── visualization/        # Plotly chart builders (Streamlit-free)
 │   └── database/             # SQLite session persistence
 │
 ├── tests/
-│   ├── unit/                 # 159 unit tests across all modules
+│   ├── unit/                 # 212 unit tests across all modules
 │   ├── integration/          # end-to-end pipeline tests (Phase 8)
 │   └── fixtures/             # synthetic data factories
 │
@@ -269,6 +282,8 @@ churn-intelligence-platform/
     ├── raw/                  # uploaded files (gitignored)
     ├── processed/            # cleaned outputs (gitignored)
     └── sample/               # synthetic demo data (committed)
+        ├── generator.py      # regenerate with: python data/sample/generator.py
+        └── subscriptions_sample.csv  # 2,000 customers, 22k rows
 ```
 
 ---
@@ -280,11 +295,11 @@ make install        # install all dependencies
 make test           # run tests with coverage report
 make lint           # ruff check + mypy type check
 make format         # auto-format with ruff
-make sample-data    # generate synthetic demo dataset
+make sample-data    # regenerate synthetic demo dataset
 make audit          # pip-audit security scan
 ```
 
-**Test coverage target: 80%+**  Current: 159 tests, all passing.
+**Test suite:** 212 unit tests, all passing.
 
 ---
 
@@ -296,8 +311,8 @@ make audit          # pip-audit security scan
 | 2 — Data Layer | ✅ Complete | Upload engine, schema normalisation, date parser, quality checker, sample generator |
 | 3 — Analytics Layer | ✅ Complete | RFM features, churn labels (leakage-protected), cohort retention matrix, KPI time series |
 | 4 — ML Layer | ✅ Complete | Temporal train/test split, LR+RF ensemble, SHAP, Kaplan-Meier CLV, segmentation |
-| 5 — Forecasting | 🔄 In progress | Holt-Winters + Prophet forecasters, 12-month revenue/subscriber projections |
-| 6 — AI Insights | ⏳ Planned | Claude/OpenAI/Template adapter, executive summaries, intervention recommendations |
+| 5 — Forecasting | ✅ Complete | Holt-Winters + Prophet forecasters, 12-month revenue/subscriber projections |
+| 6 — AI Insights | ✅ Complete | Template + LLM insight clients, structured report, automatic cache invalidation |
 | 7 — Dashboard | ⏳ Planned | Full multi-page polish, state management, export capabilities |
 | 8 — Hardening | ⏳ Planned | 80%+ coverage, integration tests, performance profiling |
 | 9 — Portfolio Polish | ⏳ Planned | Architecture diagrams, annotated screenshots, live demo |
@@ -312,11 +327,38 @@ Using a "status" column to predict churn is circular — the column already enco
 **Why a temporal split instead of random?**
 Random train/test splits are incorrect for time-series data. If a customer joins in March and we train on their March data but test on their January data, we're predicting the past. The `TimeSeriesChurnSplit` class ensures the model is always evaluated on customers who were *newer* than everyone in the training set.
 
+**Why does recency dominate SHAP importance?**
+Churn is defined as inactivity beyond the selected window (default: 90 days). Days-since-last-purchase encodes this directly, so it is expected to rank first. This is a deliberate modelling choice for subscription churn — recency is the primary behavioural signal — not a data leakage problem. The SHAP chart includes a note explaining this.
+
+**Why does CLV floor at 1 month for active customers?**
+The Kaplan-Meier median lifetime is the unconditional midpoint of the survival distribution. An active customer who has exceeded the median is not expected to churn immediately — they are demonstrably in the survivor tail. Clipping their expected remaining lifetime to zero (the naive `max(0, median - tenure)` formula) would produce a $0 CLV for some of the most loyal customers in the dataset, which is wrong. Active customers receive a minimum floor of one month of expected remaining value.
+
 **Why class_weight='balanced' instead of SMOTE?**
 SMOTE (synthetic oversampling) generates artificial data points which can introduce subtle distribution shifts. Sklearn's `class_weight='balanced'` adjusts the loss function directly — mathematically equivalent for most models, with no synthetic data artefacts.
 
 **Why no Prophet by default?**
 Prophet requires C++ build tools which can fail silently on Windows. Making it optional (in `requirements-optional.txt`) means the platform works out of the box on every OS while still supporting Prophet via a config flag for users who want seasonal modelling.
+
+---
+
+## Changelog
+
+### v0.6.0 — Phase 6: AI Insight Layer
+- Added `src/insights/` package: `InsightData`, `InsightReport` data contracts, `BaseInsightClient` ABC, `TemplateInsightClient`, `get_insight_client()` factory
+- Added `src/visualization/insights.py`: full Insights page renderer with health colour-coding
+- Added live Insights page to `app.py` with Regenerate button and template/AI mode banner
+- 30 new unit tests in `tests/unit/test_template_insights.py` (212 total, all passing)
+- Fixed SHAP 3D array handling in `src/modeling/explainability.py` for newer SHAP versions
+- Fixed SHAP feature name column access (`feature_importance["feature_name"]` not `.index`)
+
+### v0.6.1 — Pre-Phase 7 audit fixes
+- **CLV bug fix** (`src/modeling/clv.py`): Active customers who exceed median lifetime now floor at 30 days remaining (1 month) instead of $0. Long-tenured paying customers were incorrectly showing zero CLV.
+- **PII warning** (`src/visualization/predictions.py`): At-risk table now detects email-address-format customer IDs and displays a privacy notice before rendering.
+- **Overview page logic** (`app.py` line ~208): Fixed double-negation `not X is not None` (always True) to the intended `X is not None`. Success banner now correctly shows only when data is loaded.
+- **Helper function ordering** (`app.py`): Moved `_load_file`, `_show_date_confirmation`, `_finalise_upload` to before the page blocks so they are always defined on first Streamlit render, removing an edge-case `NameError` risk.
+- **Insights cache invalidation** (`app.py`): `insights_report` now clears automatically when new data is uploaded or the model is retrained. A warning banner appears when the churn window changes while cached insights exist.
+- **Recency transparency** (`app.py`): Added a caption below the SHAP importance chart explaining why recency ranks first by design.
+- **Sample data** (`data/sample/`): Generated `subscriptions_sample.csv` (2,000 customers, 22,856 rows) so the demo works out of the box. Fixed month-boundary overflow bug in `generator.py`.
 
 ---
 

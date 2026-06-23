@@ -117,6 +117,15 @@ def render_at_risk_table(
     top["Days Inactive"] = top["recency_days"].astype(int)
     top["Purchases"] = top["frequency"].astype(int)
 
+    # Warn if customer IDs look like email addresses (potential PII in a shared view)
+    sample_ids = top["customer_id"].head(10).astype(str)
+    if sample_ids.str.contains("@", na=False).any():
+        st.warning(
+            "⚠️ **Privacy notice:** Customer IDs appear to contain email addresses. "
+            "Consider anonymising your data before sharing this view publicly.",
+            icon="🔒",
+        )
+
     st.dataframe(
         top[["customer_id", "Churn Risk", "Total Spend", "Days Inactive", "Purchases"]]
         .rename(columns={"customer_id": "Customer ID"}),

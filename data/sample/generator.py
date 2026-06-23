@@ -186,10 +186,10 @@ def generate(
 
 
 def _next_month(d: date) -> date:
-    """Advance a date by exactly one month."""
+    """Advance to the 1st of the next month (avoids day-overflow for months of different lengths)."""
     if d.month == 12:
-        return d.replace(year=d.year + 1, month=1)
-    return d.replace(month=d.month + 1)
+        return d.replace(year=d.year + 1, month=1, day=1)
+    return d.replace(month=d.month + 1, day=1)
 
 
 def main() -> None:
@@ -218,7 +218,7 @@ def main() -> None:
     print(f"  Customers:    {n_customers:,}")
     print(f"  Rows:         {n_rows:,}")
     print(f"  Churn rate:   {churn_rate:.1%}")
-    print(f"  Date range:   {df['transaction_date'].min()} → {df['transaction_date'].max()}")
+    print(f"  Date range:   {df['transaction_date'].min()} to {df['transaction_date'].max()}")
 
 
 if __name__ == "__main__":

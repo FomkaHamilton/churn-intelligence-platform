@@ -135,130 +135,10 @@ def _compute_cohort(df: pd.DataFrame) -> CohortResult | None:
         return None
 
 
-def _train_model_pipeline(df: pd.DataFrame, churn_window_days: int) -> None:
-    """Run the full ML pipeline and store results in st.session_state."""
-    from src.modeling.churn_model import ChurnModel
-    from src.modeling.clv import CLVModel
-    from src.modeling.explainability import SHAPExplainer
-    from src.modeling.features import FeatureMatrixBuilder
-    from src.modeling.segmentation import CustomerSegmenter
-    from src.modeling.validation import TimeSeriesChurnSplit
-
-    try:
-        with st.spinner("Building feature matrix…"):
-            fm = FeatureMatrixBuilder().build(df, churn_window_days=churn_window_days)
-
-        with st.spinner("Temporal train/test split…"):
-            split = TimeSeriesChurnSplit().split(
-                fm.X, fm.y, fm.customer_ids, fm.first_tx_dates
-            )
-
-        with st.spinner("Training LR + RF ensemble…"):
-            model = ChurnModel()
-            model.train(split.X_train, split.y_train)
-            metrics = model.evaluate(split.X_test, split.y_test)
-
-        with st.spinner("Computing SHAP values…"):
-            shap_result = SHAPExplainer().explain(model.rf, split.X_test)
-
-        with st.spinner("Scoring all customers…"):
-            proba = model.predict_proba(fm.X)
-            predictions = pd.DataFrame({
-                "customer_id": fm.customer_ids.values,
-                "churn_probability": proba,
-            })
-
-        with st.spinner("Kaplan-Meier CLV…"):
-            clv_result = CLVModel().fit_and_predict(fm.rfm_features, fm.churn_label_df)
-
-        with st.spinner("Segmenting customers…"):
-            churn_prob_s = pd.Series(proba, index=fm.customer_ids.values)
-            segments = CustomerSegmenter().segment(
-                fm.rfm_features, fm.churn_label_df, churn_prob_s
-            )
-
-        st.session_state["model_results"] = {
-            "model": model,
-            "metrics": metrics,
-            "shap": shap_result,
-            "predictions": predictions,
-            "rfm_features": fm.rfm_features,
-            "clv": clv_result,
-            "segments": segments,
-            "split_info": {
-                "n_train": len(split.X_train),
-                "n_test": len(split.X_test),
-                "cutoff_date": split.cutoff_date,
-            },
-        }
-        st.success("✅ Model trained successfully!")
-
-    except Exception as exc:
-        st.error(f"**Model training failed:** {exc}")
-        _logger.exception("model_training_failed", error=str(exc))
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE: OVERVIEW
+# UPLOAD HELPERS  (defined here so they are available on every Streamlit rerun
+#                  regardless of which page is currently active)
 # ─────────────────────────────────────────────────────────────────────────────
-if "🏠" in (page or ""):
-    st.title("📊 Churn Intelligence Platform")
-    st.markdown("*Transform subscription transaction data into actionable retention intelligence.*")
-
-    if not st.session_state.get("clean_df") is not None and st.session_state.get("filename"):
-        st.success(f"✅ Data loaded: **{st.session_state['filename']}** — use the sidebar to navigate.")
-    else:
-        st.info("👈 Start by uploading your subscription data using **Upload Data** in the sidebar.", icon="📤")
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Version", _settings.app_version)
-    col2.metric("Build Phase", "6 / 9")
-    col3.metric("Churn Window", f"{st.session_state['churn_window_days']}d")
-    col4.metric("AI Mode", "Live" if _settings.has_ai_provider else "Template")
-
-    st.divider()
-    st.markdown("### Platform capabilities")
-    capabilities = {
-        "📤 Data Ingestion": ("CSV/XLSX upload, validation, quality profiling", "✅ Phase 2 — Live"),
-        "📈 Cohort Analytics": ("Retention matrices, MRR, ARPU, churn rate", "✅ Phase 3 — Live"),
-        "🤖 Churn Prediction": ("ML risk scoring with SHAP explainability", "✅ Phase 4 — Live"),
-        "💰 CLV Modeling": ("Survival-analysis-based customer lifetime value", "✅ Phase 4 — Live"),
-        "🔮 Revenue Forecasting": ("12-month subscriber and revenue forecasts", "✅ Phase 5 — Live"),
-        "💡 AI Insights": ("Executive summaries and intervention recommendations", "✅ Phase 6 — Live"),
-    }
-    for feature, (desc, status) in capabilities.items():
-        c1, c2, c3 = st.columns([2, 4, 2])
-        c1.markdown(f"**{feature}**")
-        c2.markdown(desc)
-        c3.markdown(f"`{status}`")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PAGE: UPLOAD DATA
-# ─────────────────────────────────────────────────────────────────────────────
-elif "📤" in (page or ""):
-    st.title("📤 Upload Subscription Data")
-    st.markdown("Upload your subscription transaction history. Accepted formats: CSV, XLSX.")
-
-    # ── Demo data shortcut ─────────────────────────────────────────────────
-    sample_path = Path("data/sample/subscriptions_sample.csv")
-    if sample_path.exists():
-        if st.button("🎲 Load sample dataset instead", type="secondary"):
-            with open(sample_path, "rb") as f:
-                _load_file(f, "subscriptions_sample.csv")
-
-    st.divider()
-    uploaded = st.file_uploader(
-        "Choose a file",
-        type=["csv", "xlsx", "xls"],
-        help=f"Maximum file size: {_settings.max_upload_size_mb} MB",
-    )
-
-    if uploaded is not None:
-        _load_file(uploaded, uploaded.name)
-
-    if st.session_state.get("parse_result") and not st.session_state.get("date_format_confirmed"):
-        _show_date_confirmation()
-
 
 def _load_file(file: object, filename: str) -> None:
     """Run the full upload → schema → date-detection pipeline."""
@@ -341,6 +221,10 @@ def _finalise_upload(df: pd.DataFrame, parse_result: object, filename: str) -> N
     st.session_state["clean_df"] = clean_df
     st.session_state["quality_report"] = report
     st.session_state["filename"] = filename
+    # New data invalidates any cached model results and insights
+    st.session_state.pop("model_results", None)
+    st.session_state.pop("insights_report", None)
+    st.session_state.pop("insights_churn_window", None)
 
     st.success(f"✅ **{filename}** loaded — {len(clean_df):,} rows ready for analysis.")
     render_quality_report(report)
@@ -351,6 +235,134 @@ def _finalise_upload(df: pd.DataFrame, parse_result: object, filename: str) -> N
         rows=len(clean_df),
         quality_passed=report.passed,
     )
+
+
+def _train_model_pipeline(df: pd.DataFrame, churn_window_days: int) -> None:
+    """Run the full ML pipeline and store results in st.session_state."""
+    from src.modeling.churn_model import ChurnModel
+    from src.modeling.clv import CLVModel
+    from src.modeling.explainability import SHAPExplainer
+    from src.modeling.features import FeatureMatrixBuilder
+    from src.modeling.segmentation import CustomerSegmenter
+    from src.modeling.validation import TimeSeriesChurnSplit
+
+    try:
+        with st.spinner("Building feature matrix…"):
+            fm = FeatureMatrixBuilder().build(df, churn_window_days=churn_window_days)
+
+        with st.spinner("Temporal train/test split…"):
+            split = TimeSeriesChurnSplit().split(
+                fm.X, fm.y, fm.customer_ids, fm.first_tx_dates
+            )
+
+        with st.spinner("Training LR + RF ensemble…"):
+            model = ChurnModel()
+            model.train(split.X_train, split.y_train)
+            metrics = model.evaluate(split.X_test, split.y_test)
+
+        with st.spinner("Computing SHAP values…"):
+            shap_result = SHAPExplainer().explain(model.rf, split.X_test)
+
+        with st.spinner("Scoring all customers…"):
+            proba = model.predict_proba(fm.X)
+            predictions = pd.DataFrame({
+                "customer_id": fm.customer_ids.values,
+                "churn_probability": proba,
+            })
+
+        with st.spinner("Kaplan-Meier CLV…"):
+            clv_result = CLVModel().fit_and_predict(fm.rfm_features, fm.churn_label_df)
+
+        with st.spinner("Segmenting customers…"):
+            churn_prob_s = pd.Series(proba, index=fm.customer_ids.values)
+            segments = CustomerSegmenter().segment(
+                fm.rfm_features, fm.churn_label_df, churn_prob_s
+            )
+
+        st.session_state["model_results"] = {
+            "model": model,
+            "metrics": metrics,
+            "shap": shap_result,
+            "predictions": predictions,
+            "rfm_features": fm.rfm_features,
+            "clv": clv_result,
+            "segments": segments,
+            "split_info": {
+                "n_train": len(split.X_train),
+                "n_test": len(split.X_test),
+                "cutoff_date": split.cutoff_date,
+            },
+        }
+        # New model results invalidate any cached insights
+        st.session_state.pop("insights_report", None)
+        st.session_state.pop("insights_churn_window", None)
+        st.success("✅ Model trained successfully!")
+
+    except Exception as exc:
+        st.error(f"**Model training failed:** {exc}")
+        _logger.exception("model_training_failed", error=str(exc))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE: OVERVIEW
+# ─────────────────────────────────────────────────────────────────────────────
+if "🏠" in (page or ""):
+    st.title("📊 Churn Intelligence Platform")
+    st.markdown("*Transform subscription transaction data into actionable retention intelligence.*")
+
+    if st.session_state.get("clean_df") is not None and st.session_state.get("filename"):
+        st.success(f"✅ Data loaded: **{st.session_state['filename']}** — use the sidebar to navigate.")
+    else:
+        st.info("👈 Start by uploading your subscription data using **Upload Data** in the sidebar.", icon="📤")
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Version", _settings.app_version)
+    col2.metric("Build Phase", "6 / 9")
+    col3.metric("Churn Window", f"{st.session_state['churn_window_days']}d")
+    col4.metric("AI Mode", "Live" if _settings.has_ai_provider else "Template")
+
+    st.divider()
+    st.markdown("### Platform capabilities")
+    capabilities = {
+        "📤 Data Ingestion": ("CSV/XLSX upload, validation, quality profiling", "✅ Phase 2 — Live"),
+        "📈 Cohort Analytics": ("Retention matrices, MRR, ARPU, churn rate", "✅ Phase 3 — Live"),
+        "🤖 Churn Prediction": ("ML risk scoring with SHAP explainability", "✅ Phase 4 — Live"),
+        "💰 CLV Modeling": ("Survival-analysis-based customer lifetime value", "✅ Phase 4 — Live"),
+        "🔮 Revenue Forecasting": ("12-month subscriber and revenue forecasts", "✅ Phase 5 — Live"),
+        "💡 AI Insights": ("Executive summaries and intervention recommendations", "✅ Phase 6 — Live"),
+    }
+    for feature, (desc, status) in capabilities.items():
+        c1, c2, c3 = st.columns([2, 4, 2])
+        c1.markdown(f"**{feature}**")
+        c2.markdown(desc)
+        c3.markdown(f"`{status}`")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE: UPLOAD DATA
+# ─────────────────────────────────────────────────────────────────────────────
+elif "📤" in (page or ""):
+    st.title("📤 Upload Subscription Data")
+    st.markdown("Upload your subscription transaction history. Accepted formats: CSV, XLSX.")
+
+    # ── Demo data shortcut ─────────────────────────────────────────────────
+    sample_path = Path("data/sample/subscriptions_sample.csv")
+    if sample_path.exists():
+        if st.button("🎲 Load sample dataset instead", type="secondary"):
+            with open(sample_path, "rb") as f:
+                _load_file(f, "subscriptions_sample.csv")
+
+    st.divider()
+    uploaded = st.file_uploader(
+        "Choose a file",
+        type=["csv", "xlsx", "xls"],
+        help=f"Maximum file size: {_settings.max_upload_size_mb} MB",
+    )
+
+    if uploaded is not None:
+        _load_file(uploaded, uploaded.name)
+
+    if st.session_state.get("parse_result") and not st.session_state.get("date_format_confirmed"):
+        _show_date_confirmation()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -509,6 +521,11 @@ elif "🤖" in (page or ""):
             with col_shap:
                 st.markdown("#### Feature Importance (SHAP)")
                 render_shap_importance(model_results["shap"])
+                st.caption(
+                    "**Note on recency:** Days-since-last-purchase is expected to rank highly here "
+                    "because churn is defined as inactivity beyond the selected window. "
+                    "This is by design — recency is the primary behavioural signal for subscription churn."
+                )
 
             st.divider()
             # ── At-risk table ─────────────────────────────────────────────
@@ -661,6 +678,16 @@ elif "💡" in (page or ""):
 
             # ── Generate & cache report ────────────────────────────────────
             cache_key = "insights_report"
+
+            # Warn if the churn window has changed since insights were last generated
+            prior_window = st.session_state.get("insights_churn_window")
+            if prior_window is not None and prior_window != churn_window and cache_key in st.session_state:
+                st.warning(
+                    f"⚠️ Churn window changed from **{prior_window} days** to **{churn_window} days**. "
+                    "Click **Regenerate Insights** to refresh.",
+                    icon="🔄",
+                )
+
             regen = st.button("🔄 Regenerate Insights", type="secondary")
             if regen or cache_key not in st.session_state:
                 with st.spinner("Generating insights…"):
@@ -669,6 +696,7 @@ elif "💡" in (page or ""):
                         openai_api_key=_settings.openai_api_key,
                     )
                     st.session_state[cache_key] = client.generate(insight_data)
+                    st.session_state["insights_churn_window"] = churn_window
 
             render_insights_page(st.session_state[cache_key])
 

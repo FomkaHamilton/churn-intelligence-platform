@@ -74,8 +74,15 @@ class CLVModel:
             # Very low churn rate — median can't be reached; use mean tenure × 2 as proxy
             median_lifetime = float(merged["tenure_days"].mean()) * 2
 
-        # Per-customer expected remaining months
-        remaining_days = (median_lifetime - merged["tenure_days"]).clip(lower=0)
+        # Per-customer expected remaining months.
+        # Active customers always retain at least 30 days of expected future value —
+        # clipping them to 0 when their tenure exceeds the median is wrong, because
+        # reaching the median just means they're a survivor, not that they're about to leave.
+        is_active = ~merged["is_churned"].astype(bool)
+        remaining_days = median_lifetime - merged["tenure_days"]
+        remaining_days_churned = remaining_days.clip(lower=0)
+        remaining_days_active = remaining_days.clip(lower=30.0)
+        remaining_days = remaining_days_active.where(is_active, remaining_days_churned)
         remaining_months = remaining_days / 30.44
 
         monthly_spend = (merged["aov"] * merged["tx_per_month"].clip(lower=0.01)).clip(lower=0)

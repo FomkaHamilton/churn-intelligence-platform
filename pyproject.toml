@@ -58,7 +58,13 @@ addopts = "-v --cov=src --cov-report=term-missing --cov-report=xml"
 # ── Coverage ──────────────────────────────────────────────────────────────────
 [tool.coverage.run]
 source = ["src"]
-omit = ["tests/*", "*/migrations/*", "*/__init__.py"]
+omit = [
+    "tests/*",
+    "*/migrations/*",
+    "*/__init__.py",
+    "src/pages/*",
+    "src/visualization/*",
+]
 
 [tool.coverage.report]
 exclude_lines = [

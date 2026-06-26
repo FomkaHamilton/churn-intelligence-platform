@@ -38,8 +38,8 @@ lint:              ## Lint and type-check source code
 format:            ## Auto-format source code
 	ruff format src/ tests/
 
-audit:             ## Run security audit on dependencies
-	pip-audit
+audit:             ## Run security audit on project dependencies
+	pip-audit -r requirements.txt -r requirements-dev.txt
 
 # ── Maintenance ───────────────────────────────────────────────────────────────
 

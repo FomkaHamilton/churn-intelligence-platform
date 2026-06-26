@@ -22,6 +22,10 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
+# curl is required by the HEALTHCHECK command
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy pre-built packages from builder
 COPY --from=builder /install /usr/local
 

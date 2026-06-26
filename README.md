@@ -160,37 +160,115 @@ Phase 7 delivered the complete Streamlit multi-page application: navigation side
 
 ## Quick start
 
-### Option A — Docker (recommended)
+Choose the route that fits your setup. All four options end at the same app — pick whatever gets you there fastest.
+
+---
+
+### Option A — GitHub Codespaces (zero install, browser-based)
+
+No Python, Git, or Docker required. Everything runs in the browser.
+
+1. Click **Code → Codespaces → Create codespace on master** on the GitHub repo page.
+2. Wait ~2 minutes for the environment to build (installs all dependencies automatically).
+3. When the terminal is ready, run `streamlit run app.py`.
+4. Codespaces will pop up a notification: **"Your application running on port 8501 is available."** Click **Open in Browser**.
+5. On the Upload page, click **Load sample dataset** — the full app loads immediately with 2,000 synthetic customers. No file to prepare.
+
+> The `.devcontainer/devcontainer.json` configures Python 3.11, all dependencies, and the Streamlit port automatically.
+
+---
+
+### Option B — Streamlit Community Cloud (hosted, no local setup)
+
+Fork the repo and get a public URL in under 5 minutes.
+
+1. Fork this repository to your GitHub account.
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+3. Click **Create app**, select your fork, set **Main file path** to `app.py`.
+4. Under **Advanced settings → Secrets**, paste the contents of `.streamlit/secrets.toml.example` (API keys are optional — the platform runs fully in template mode without them).
+5. Click **Deploy**. Streamlit Cloud will build and serve the app at a public URL.
+
+> Streamlit Cloud injects secrets as environment variables — the Pydantic settings layer (`src/config/settings.py`) reads them automatically. No code change needed to go from local `.env` to cloud.
+
+---
+
+### Option C — Docker (recommended for local use)
+
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
 ```bash
-cp .env.example .env        # add your API key if you want AI insights (optional)
-docker compose up
-# open http://localhost:8501
+git clone https://github.com/FomkaHamilton/churn-intelligence-platform.git
+cd churn-intelligence-platform
+
+cp .env.example .env         # leave API keys blank — template mode works without them
+docker compose up --build
 ```
 
-### Option B — Local Python
+Open [http://localhost:8501](http://localhost:8501). The first build takes ~3 minutes; subsequent starts are instant.
+
+To stop: `Ctrl+C`, then `docker compose down`.
+
+---
+
+### Option D — Local Python
+
+**Prerequisites:** Python 3.11 or 3.12, Git.
 
 ```bash
 git clone https://github.com/FomkaHamilton/churn-intelligence-platform.git
 cd churn-intelligence-platform
 
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+
+# Mac / Linux:
+source .venv/bin/activate
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Windows (Command Prompt):
+.venv\Scripts\activate.bat
 
 pip install -r requirements.txt
-cp .env.example .env           # optional: add ANTHROPIC_API_KEY or OPENAI_API_KEY
 
+cp .env.example .env         # leave API keys blank for template mode
 streamlit run app.py
 ```
 
-The app includes a **Load sample dataset** button on the Upload page — click it to explore the full platform with 22,000+ realistic synthetic transactions immediately, no file needed.
+Open [http://localhost:8501](http://localhost:8501).
 
-To regenerate the sample data:
+> **Windows note:** If `Activate.ps1` is blocked by execution policy, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` in PowerShell first.
+
+---
+
+### First steps once the app is open
+
+The app works best when followed in order — each page feeds state into the next.
+
+1. **Upload** — Click **Load sample dataset** (top of the page). This loads 2,000 synthetic customers and 22,000+ transactions instantly. You can also upload your own CSV (three required columns: `customer_id`, `transaction_date`, `transaction_amount`).
+
+2. **Analytics** — Review the KPI dashboard (MRR, active subscribers, ARPU, churn rate) and the cohort retention heatmap. No action needed — this page auto-computes when data is loaded.
+
+3. **Predictions** — Click **Train Model**. This runs the full ML pipeline (~10 seconds on sample data): churn prediction, SHAP explainability, Kaplan-Meier CLV, and customer segmentation. Results persist across page navigations.
+
+4. **Forecasting** — Displays a 12-month revenue and subscriber projection automatically after the model is trained.
+
+5. **Insights** — Click **Generate Insights** (or **Regenerate**) for a plain-language executive briefing. Uses template mode by default; add `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to `.env` for AI-written narratives.
+
+6. **Export** — Download buttons appear on the Predictions page (CSV: at-risk list, CLV projections, full scored dataset) and the Insights page (PDF executive briefing).
+
+---
+
+### Adding an AI key (optional)
+
+The platform runs fully without an API key using built-in template mode. To enable AI-written insights:
 
 ```bash
-python data/sample/generator.py
-# creates data/sample/subscriptions_sample.csv (~22k rows, 2,000 customers)
+# In .env:
+ANTHROPIC_API_KEY=sk-ant-...    # Claude (recommended)
+# or
+OPENAI_API_KEY=sk-...           # GPT-4o
 ```
+
+The factory (`src/insights/factory.py`) picks the right backend automatically. No other config change needed.
 
 ---
 
@@ -199,18 +277,6 @@ python data/sample/generator.py
 Screenshots will be added after the Streamlit Community Cloud deployment is live. The capture guide and annotation instructions (using Pillow) are in [docs/screenshots/](docs/screenshots/).
 
 Pages covered: Upload + Quality Report, KPI Trends, Cohort Retention Heatmap, Churn Predictions + SHAP, CLV + Segments, 12-Month Forecast, AI Executive Briefing, PDF Export.
-
----
-
-## Deploy to Streamlit Community Cloud
-
-1. Fork this repository to your GitHub account.
-2. Go to [share.streamlit.io](https://share.streamlit.io) and connect your fork.
-3. Set **Main file path** to `app.py`.
-4. In **App Settings → Secrets**, paste the contents of `.streamlit/secrets.toml.example` and fill in your values (API keys are optional — the platform works in template mode without them).
-5. Click **Deploy**.
-
-The app uses Pydantic settings (`src/config/settings.py`) which reads from environment variables. Streamlit Cloud injects `st.secrets` values as environment variables automatically, so no code change is needed to move from local `.env` to cloud secrets.
 
 ---
 

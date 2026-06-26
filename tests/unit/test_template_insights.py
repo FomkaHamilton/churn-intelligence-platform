@@ -372,3 +372,137 @@ class TestFactory:
         data = _make_minimal_data()
         result = client.generate(data)
         assert isinstance(result, InsightReport)
+
+
+# ── Coverage gap tests ────────────────────────────────────────────────────────
+
+def _make_short_history_data(n_months: int) -> InsightData:
+    """InsightData backed by only n_months of transaction history."""
+    import datetime
+
+    rows = []
+    for i in range(60):
+        for m in range(n_months):
+            rows.append({
+                "customer_id": f"c{i}",
+                "transaction_date": datetime.date(2023, 1, 1) + datetime.timedelta(days=m * 30 + i % 28),
+                "transaction_amount": 50.0 + i,
+            })
+    df = pd.DataFrame(rows)
+    kpi_ts = KPICalculator().calculate(df)
+    rfm = RFMBuilder().build(df)
+    labels = ChurnLabelBuilder().build(df)
+    return InsightData(
+        kpi_snapshot=kpi_ts.snapshot,
+        kpi_ts=kpi_ts,
+        churn_label_result=labels,
+        rfm_result=rfm,
+    )
+
+
+def _make_data_with_auc(auc: float) -> InsightData:
+    """InsightData with mock ModelMetrics at a specific AUC level."""
+    from src.modeling.churn_model import ModelMetrics
+
+    metrics = ModelMetrics(
+        auc=auc,
+        precision=0.72,
+        recall=0.65,
+        f1=0.68,
+        confusion_matrix=np.array([[90, 10], [5, 15]]),
+        fpr=np.array([0.0, 0.5, 1.0]),
+        tpr=np.array([0.0, 0.8, 1.0]),
+        n_train=160,
+        n_test=40,
+    )
+    data = _make_minimal_data()
+    return InsightData(
+        kpi_snapshot=data.kpi_snapshot,
+        kpi_ts=data.kpi_ts,
+        churn_label_result=data.churn_label_result,
+        rfm_result=data.rfm_result,
+        model_metrics=metrics,
+    )
+
+
+class TestHealthSummaryGaps:
+    def setup_method(self) -> None:
+        self.client = TemplateInsightClient()
+
+    def test_zero_churn_rate_says_no_lapsed(self) -> None:
+        # _make_minimal_data() has all customers active → churn_rate == 0.0
+        data = _make_minimal_data()
+        # Force churn_rate to 0.0 if not already
+        assert data.churn_label_result.churn_rate == pytest.approx(0.0)
+        result = self.client.generate(data)
+        assert "lapsed" in result.health_summary.lower() or "no customers" in result.health_summary.lower()
+
+    def test_revenue_history_one_month_no_trend_sentence(self) -> None:
+        data = _make_short_history_data(1)
+        result = self.client.generate(data)
+        # With only 1 month, trend_sentence is "" — health summary still renders
+        assert len(result.health_summary) > 0
+
+    def test_revenue_history_two_months_uses_first_last_comparison(self) -> None:
+        data = _make_short_history_data(2)
+        result = self.client.generate(data)
+        lower = result.health_summary.lower()
+        assert "trend" in lower or "stable" in lower or "upward" in lower or "downward" in lower
+
+    def test_revenue_history_four_months(self) -> None:
+        data = _make_short_history_data(4)
+        result = self.client.generate(data)
+        assert len(result.health_summary) > 0
+
+
+class TestRevenueOutlookGaps:
+    def setup_method(self) -> None:
+        self.client = TemplateInsightClient()
+
+    def test_no_forecast_short_history_insufficient_trend(self) -> None:
+        # < 4 months: hits "Insufficient history" branch
+        data = _make_short_history_data(3)
+        result = self.client.generate(data)
+        assert "insufficient" in result.revenue_outlook.lower() or "forecasting" in result.revenue_outlook.lower()
+
+    def test_no_forecast_four_plus_months_shows_trend(self) -> None:
+        # >= 4 months: hits the recent_avg / prior_avg comparison branch
+        data = _make_short_history_data(5)
+        result = self.client.generate(data)
+        lower = result.revenue_outlook.lower()
+        assert "revenue" in lower
+
+
+class TestModelConfidenceAucBrackets:
+    def setup_method(self) -> None:
+        self.client = TemplateInsightClient()
+
+    def test_auc_excellent_90_plus(self) -> None:
+        data = _make_data_with_auc(0.92)
+        result = self.client.generate(data)
+        assert result.model_confidence is not None
+        assert "excellent" in result.model_confidence.lower()
+
+    def test_auc_strong_80_to_90(self) -> None:
+        data = _make_data_with_auc(0.85)
+        result = self.client.generate(data)
+        assert result.model_confidence is not None
+        assert "strong" in result.model_confidence.lower()
+
+    def test_auc_good_70_to_80(self) -> None:
+        data = _make_data_with_auc(0.75)
+        result = self.client.generate(data)
+        assert result.model_confidence is not None
+        assert "good" in result.model_confidence.lower()
+
+    def test_auc_moderate_60_to_70(self) -> None:
+        data = _make_data_with_auc(0.65)
+        result = self.client.generate(data)
+        assert result.model_confidence is not None
+        assert "moderate" in result.model_confidence.lower()
+
+    def test_auc_limited_below_60(self) -> None:
+        data = _make_data_with_auc(0.55)
+        result = self.client.generate(data)
+        assert result.model_confidence is not None
+        assert "limited" in result.model_confidence.lower()

@@ -94,3 +94,17 @@ class TestEdgeCases:
         dates = pd.Series(pd.to_datetime(["2024-01-01"]))
         with pytest.raises(InsufficientDataError):
             self.splitter.split(X, y, ids, dates)
+
+    def test_all_same_date_triggers_fallback_then_leakage_error(self) -> None:
+        # When every customer has the same first_tx_date, the quantile-based
+        # split produces test_mask.sum() == 0, so the fallback runs (lines 68–73).
+        # The fallback then sets cutoff_date == the shared date, causing every
+        # reassigned test customer to violate the leakage invariant → TemporalLeakageError.
+        n = 10
+        same_date = pd.Timestamp("2024-01-01")
+        dates = pd.Series([same_date] * n)
+        X = pd.DataFrame({"f": range(n)})
+        y = pd.Series([i % 2 for i in range(n)])
+        ids = pd.Series([f"c{i}" for i in range(n)])
+        with pytest.raises(TemporalLeakageError):
+            self.splitter.split(X, y, ids, dates)

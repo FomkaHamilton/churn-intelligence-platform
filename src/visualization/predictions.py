@@ -29,15 +29,30 @@ _LAYOUT_BASE: dict = dict(
 def render_model_metrics(metrics: ModelMetrics) -> None:
     """Four-column metric strip."""
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("AUC-ROC", f"{metrics.auc:.3f}",
-                delta="good" if metrics.auc >= 0.75 else "needs improvement",
-                delta_color="normal" if metrics.auc >= 0.75 else "inverse")
-    col2.metric("Precision", f"{metrics.precision:.3f}")
-    col3.metric("Recall",    f"{metrics.recall:.3f}")
-    col4.metric("F1 Score",  f"{metrics.f1:.3f}")
+    col1.metric(
+        "Prediction Accuracy",
+        f"{metrics.auc:.3f}",
+        delta="strong" if metrics.auc >= 0.75 else "needs improvement",
+        delta_color="normal" if metrics.auc >= 0.75 else "inverse",
+        help="AUC score (0.5 = random guessing, 1.0 = perfect). Measures how well the model separates churners from retained customers. Above 0.75 is considered strong for subscription churn.",
+    )
+    col2.metric(
+        "Precision",
+        f"{metrics.precision:.3f}",
+        help="Of all customers the model flagged as at-risk, this share actually churned. Higher means fewer false alarms.",
+    )
+    col3.metric(
+        "Recall",
+        f"{metrics.recall:.3f}",
+        help="Of all customers who actually churned, this share was correctly identified. Higher means fewer missed churners.",
+    )
+    col4.metric(
+        "F1 Score",
+        f"{metrics.f1:.3f}",
+        help="Combined score balancing Precision and Recall. Useful when you want to minimise both false alarms and missed churners.",
+    )
     st.caption(
-        f"Trained on {metrics.n_train:,} customers · "
-        f"Evaluated on {metrics.n_test:,} held-out customers"
+        f"Tested on {metrics.n_test:,} held-out customers · Trained on {metrics.n_train:,} customers"
     )
 
 
@@ -84,12 +99,16 @@ def render_shap_importance(shap_result: SHAPResult, top_n: int = 7) -> None:
     fig.update_layout(
         **_LAYOUT_BASE,
         height=max(220, top_n * 38),
-        xaxis=dict(title="Mean |SHAP value|"),
+        xaxis=dict(title="Influence on churn prediction (higher = stronger signal)"),
         yaxis=dict(tickfont=dict(size=12)),
         showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True)
-    st.caption("Higher SHAP = stronger influence on churn prediction for this feature.")
+    st.caption(
+        "Longer bar = stronger influence on the churn risk score. "
+        "Features with high values push the model toward predicting churn; "
+        "low values suggest the customer is likely to stay."
+    )
 
 
 def render_at_risk_table(

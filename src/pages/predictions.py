@@ -102,7 +102,9 @@ def render_predictions_page() -> None:
             icon="🤖",
         )
         col_info.markdown(
-            "**What trains:**  LR + RF ensemble · Temporal split · SHAP · CLV · Segmentation"
+            "**What the model does:** Scores every customer by churn probability, "
+            "identifies the behaviors driving risk, estimates future revenue per customer, "
+            "and groups customers into five action-ready segments."
         )
         if col_btn.button("🚀 Train Churn Model", type="primary", use_container_width=True):
             _train_model_pipeline(df, churn_window)
@@ -130,10 +132,12 @@ def render_predictions_page() -> None:
     st.divider()
     col_roc, col_shap = st.columns(2)
     with col_roc:
-        st.markdown("#### ROC Curve")
+        st.markdown("#### How Well Does the Model Predict?")
+        st.caption("The curve shows how the model trades off catching all churners vs. avoiding false alarms. Higher and further left = better.")
         render_roc_curve(model_results["metrics"])
     with col_shap:
-        st.markdown("#### Feature Importance (SHAP)")
+        st.markdown("#### What's Driving Churn Risk?")
+        st.caption("Which customer behaviors most strongly predict whether someone will cancel.")
         render_shap_importance(model_results["shap"])
         st.caption(
             "**Note on recency:** Days-since-last-purchase is expected to rank highly here "
@@ -161,13 +165,30 @@ def render_predictions_page() -> None:
         st.markdown("#### Segment Distribution")
         render_segment_distribution(model_results["segments"])
     with col_clv:
-        st.markdown("#### CLV Summary")
+        st.markdown("#### Customer Lifetime Value")
+        st.caption("How much revenue each customer is expected to generate before they leave.")
         clv = model_results["clv"]
         rc1, rc2 = st.columns(2)
-        rc1.metric("Median Lifetime", f"{clv.median_lifetime_days:.0f} days")
-        rc2.metric("Avg Expected CLV", f"${clv.clv_per_customer['expected_clv'].mean():,.0f}")
-        rc1.metric("Avg Remaining", f"{clv.clv_per_customer['expected_remaining_months'].mean():.1f} mo")
-        rc2.metric("Top CLV Customer", f"${clv.clv_per_customer['expected_clv'].max():,.0f}")
+        rc1.metric(
+            "Median Customer Lifetime",
+            f"{clv.median_lifetime_days:.0f} days",
+            help="Half of customers stay longer than this, half leave sooner.",
+        )
+        rc2.metric(
+            "Avg Projected Value",
+            f"${clv.clv_per_customer['expected_clv'].mean():,.0f}",
+            help="Expected total revenue per customer over their remaining lifetime.",
+        )
+        rc1.metric(
+            "Avg Remaining Lifetime",
+            f"{clv.clv_per_customer['expected_remaining_months'].mean():.1f} months",
+            help="Average number of months the typical active customer is expected to remain subscribed.",
+        )
+        rc2.metric(
+            "Highest-Value Customer",
+            f"${clv.clv_per_customer['expected_clv'].max():,.0f}",
+            help="The single highest projected lifetime value among all scored customers.",
+        )
         st.download_button(
             "⬇️ Download CLV Table (CSV)",
             data=build_clv_csv(clv.clv_per_customer),

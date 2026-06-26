@@ -70,7 +70,11 @@ with st.sidebar:
             "Churn window (days)",
             options=[30, 60, 90, 120],
             index=[30, 60, 90, 120].index(st.session_state["churn_window_days"]),
-            help="A customer is considered churned if they have no activity within this window.",
+            help=(
+                "How many days without a transaction before a customer is considered 'churned'. "
+                "This setting affects: churn labels on the Analytics page, the Predictions model (retrain to apply), and the AI Insights report. "
+                "It does NOT change revenue trends, cohort retention, or subscriber counts."
+            ),
         )
         st.session_state["churn_window_days"] = churn_window
 

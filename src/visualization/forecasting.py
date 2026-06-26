@@ -81,13 +81,25 @@ def render_forecast_chart(
 
     # Vertical separator between historical and forecast
     if hist_x:
-        fig.add_vline(
+        fig.add_shape(
+            type="line",
+            x0=hist_x[-1],
+            x1=hist_x[-1],
+            y0=0,
+            y1=1,
+            yref="paper",
+            line=dict(color="#9CA3AF", dash="dot", width=1),
+        )
+        fig.add_annotation(
             x=hist_x[-1],
-            line_dash="dot",
-            line_color="#6B7280",
-            annotation_text="forecast →",
-            annotation_position="top right",
-            annotation_font_size=11,
+            y=0.96,
+            yref="paper",
+            text="forecast →",
+            showarrow=False,
+            font=dict(size=10, color="#6B7280"),
+            xanchor="left",
+            bgcolor="rgba(255,255,255,0.75)",
+            borderpad=2,
         )
 
     tick_format = ",.0f"
@@ -112,9 +124,9 @@ def render_forecast_chart(
 
     st.plotly_chart(fig, use_container_width=True)
     st.caption(
-        f"{result.horizon_months}-month forecast · "
-        f"Backend: {result.backend} · "
-        "Shaded region = 80% prediction interval"
+        f"{result.horizon_months}-month projection · "
+        f"Shaded band = 80% confidence range · "
+        f"Method: {result.backend}"
     )
 
 
@@ -126,7 +138,23 @@ def render_forecast_metrics(revenue: ForecastResult, subscribers: ForecastResult
     avg_subs = float(subscribers.forecast.mean())
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric(f"Forecast {revenue.horizon_months}m Revenue", f"${total_fc_rev:,.0f}")
-    col2.metric("Avg Monthly Revenue", f"${avg_fc_rev:,.0f}")
-    col3.metric(f"Subscribers (month {subscribers.horizon_months})", f"{end_subs:,.0f}")
-    col4.metric("Avg Monthly Subscribers", f"{avg_subs:,.0f}")
+    col1.metric(
+        f"Projected Revenue ({revenue.horizon_months} mo)",
+        f"${total_fc_rev:,.0f}",
+        help="Total revenue expected over the forecast horizon based on current trends.",
+    )
+    col2.metric(
+        "Avg Monthly Revenue",
+        f"${avg_fc_rev:,.0f}",
+        help="Average monthly revenue across the forecast period.",
+    )
+    col3.metric(
+        f"Subscribers at Month {subscribers.horizon_months}",
+        f"{end_subs:,.0f}",
+        help="Projected number of active subscribers at the end of the forecast horizon.",
+    )
+    col4.metric(
+        "Avg Monthly Subscribers",
+        f"{avg_subs:,.0f}",
+        help="Average active subscriber count across the forecast period.",
+    )

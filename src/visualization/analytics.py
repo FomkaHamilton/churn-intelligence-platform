@@ -26,14 +26,27 @@ _LAYOUT_BASE: dict = dict(
 def render_kpi_strip(snapshot: KPISnapshot) -> None:
     """Four headline metrics in a single row."""
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("MRR", f"${snapshot.mrr:,.0f}")
-    col2.metric("Active Subscribers", f"{snapshot.active_subscribers:,}")
-    col3.metric("ARPU", f"${snapshot.arpu:.2f}")
+    col1.metric(
+        "Monthly Revenue",
+        f"${snapshot.mrr:,.0f}",
+        help="Total subscription payments collected in the most recent complete month. Also called MRR (Monthly Recurring Revenue).",
+    )
+    col2.metric(
+        "Active Subscribers",
+        f"{snapshot.active_subscribers:,}",
+        help="Unique customers who made at least one payment in the most recent month.",
+    )
+    col3.metric(
+        "Revenue per Customer",
+        f"${snapshot.arpu:.2f}",
+        help="Monthly revenue divided by the number of active subscribers. Also called ARPU (Average Revenue Per User).",
+    )
     col4.metric(
-        "Monthly Churn",
+        "Monthly Churn Rate",
         f"{snapshot.monthly_churn_rate:.1f}%",
         delta=f"{snapshot.monthly_churn_rate:.1f}%",
         delta_color="inverse",
+        help="Percentage of last month's subscribers who did not make a payment this month. Measures how fast the business is losing customers.",
     )
 
 

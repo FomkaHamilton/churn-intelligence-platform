@@ -74,18 +74,18 @@ class HoltWintersForecaster(BaseForecaster):
 
         # Build month-period index for forecast
         last_month = self._last_period(series)
-        forecast_index = pd.period_range(
-            start=last_month + 1, periods=horizon_months, freq="M"
-        )
+        next_start = last_month.to_timestamp() + pd.DateOffset(months=1)
+        forecast_index = pd.period_range(start=next_start, periods=horizon_months, freq="M")
+        str_index = [str(p) for p in forecast_index]
 
-        forecast_s = pd.Series(point_forecast, index=forecast_index.astype(str))
+        forecast_s = pd.Series(point_forecast, index=str_index)
         lower_s = pd.Series(
             np.maximum(point_forecast - interval_width, 0),
-            index=forecast_index.astype(str),
+            index=str_index,
         )
         upper_s = pd.Series(
             point_forecast + interval_width,
-            index=forecast_index.astype(str),
+            index=str_index,
         )
 
         historical_s = pd.Series(series.values, index=[str(i) for i in series.index])

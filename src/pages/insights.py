@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 import streamlit as st
 
 from src.config.settings import get_yaml_config
+from src.export import build_insights_pdf
 from src.insights.factory import get_insight_client
 from src.insights.models import InsightData
 from src.pages._cache import (
@@ -82,3 +85,16 @@ def render_insights_tab(settings) -> None:
             st.session_state["insights_churn_window"] = churn_window
 
     render_insights_page(st.session_state[cache_key])
+
+    st.divider()
+    pdf_bytes = build_insights_pdf(
+        st.session_state[cache_key],
+        generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    )
+    st.download_button(
+        "⬇️ Download Executive Briefing (PDF)",
+        data=pdf_bytes,
+        file_name="churn_executive_briefing.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+    )

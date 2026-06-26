@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from src.export import build_at_risk_csv, build_clv_csv, build_full_predictions_csv
 from src.utils.log import get_logger
 from src.visualization.predictions import (
     render_at_risk_table,
@@ -135,6 +136,13 @@ def render_predictions_page() -> None:
         model_results["predictions"],
         model_results["rfm_features"],
     )
+    st.download_button(
+        "⬇️ Download At-Risk Customers (CSV)",
+        data=build_at_risk_csv(model_results["predictions"], model_results["rfm_features"]),
+        file_name="at_risk_customers.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
 
     st.divider()
     col_seg, col_clv = st.columns(2)
@@ -149,8 +157,23 @@ def render_predictions_page() -> None:
         rc2.metric("Avg Expected CLV", f"${clv.clv_per_customer['expected_clv'].mean():,.0f}")
         rc1.metric("Avg Remaining", f"{clv.clv_per_customer['expected_remaining_months'].mean():.1f} mo")
         rc2.metric("Top CLV Customer", f"${clv.clv_per_customer['expected_clv'].max():,.0f}")
+        st.download_button(
+            "⬇️ Download CLV Table (CSV)",
+            data=build_clv_csv(clv.clv_per_customer),
+            file_name="customer_lifetime_value.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
 
     st.divider()
-    if st.button("🔄 Retrain Model", type="secondary"):
+    col_export, col_retrain = st.columns([3, 1])
+    col_export.download_button(
+        "⬇️ Download Full Predictions (CSV)",
+        data=build_full_predictions_csv(model_results["predictions"], model_results["rfm_features"]),
+        file_name="churn_predictions_full.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+    if col_retrain.button("🔄 Retrain Model", type="secondary", use_container_width=True):
         st.session_state.pop("model_results", None)
         st.rerun()

@@ -38,6 +38,9 @@ structlog>=24.2.0
 # ── Database (session persistence) ───────────────────────────────────────────
 sqlalchemy>=2.0.0
 
+# ── Export (PDF generation) ───────────────────────────────────────────────────
+fpdf2>=2.7.0
+
 # ── AI Insight Layer ──────────────────────────────────────────────────────────
 # Both are optional at runtime — the platform works without API keys.
 # Remove either line if you don't plan to use that provider.

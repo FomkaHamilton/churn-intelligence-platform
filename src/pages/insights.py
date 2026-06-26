@@ -8,6 +8,9 @@ from src.config.settings import get_yaml_config
 from src.export import build_insights_pdf
 from src.insights.factory import get_insight_client
 from src.insights.models import InsightData
+from src.utils.log import get_logger
+
+_logger = get_logger(__name__)
 from src.pages._cache import (
     compute_churn_labels,
     compute_cohort,
@@ -52,10 +55,10 @@ def render_insights_tab(settings) -> None:
         rfm_result=rfm_result,
         churn_window_days=churn_window,
         cohort_result=cohort_result,
-        model_metrics=model_results["metrics"] if model_results else None,
-        shap_result=model_results["shap"] if model_results else None,
-        segments=model_results["segments"] if model_results else None,
-        clv_result=model_results["clv"] if model_results else None,
+        model_metrics=model_results.get("metrics") if model_results else None,
+        shap_result=model_results.get("shap") if model_results else None,
+        segments=model_results.get("segments") if model_results else None,
+        clv_result=model_results.get("clv") if model_results else None,
     )
 
     try:
@@ -64,7 +67,7 @@ def render_insights_tab(settings) -> None:
         _fc_horizon = int(yaml_cfg.get("forecasting", {}).get("horizon_months", 12))
         insight_data.forecast_bundle = compute_forecast(df, _fc_horizon, _fc_backend)
     except Exception:
-        pass
+        _logger.warning("forecast_for_insights_failed")
 
     cache_key = "insights_report"
     prior_window = st.session_state.get("insights_churn_window")

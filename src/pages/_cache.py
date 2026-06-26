@@ -7,6 +7,9 @@ from src.analytics.cohort import CohortAnalyzer, CohortResult
 from src.analytics.kpis import KPICalculator, KPITimeSeries
 from src.feature_engineering.churn_labels import ChurnLabelBuilder, ChurnLabelResult
 from src.feature_engineering.rfm import RFMBuilder, RFMResult
+from src.utils.log import get_logger
+
+_logger = get_logger(__name__)
 
 
 @st.cache_data
@@ -19,6 +22,7 @@ def compute_rfm(df: pd.DataFrame) -> RFMResult | None:
     try:
         return RFMBuilder().build(df)
     except Exception:
+        _logger.exception("compute_rfm_failed")
         return None
 
 
@@ -32,6 +36,7 @@ def compute_cohort(df: pd.DataFrame) -> CohortResult | None:
     try:
         return CohortAnalyzer().build(df)
     except Exception:
+        _logger.exception("compute_cohort_failed")
         return None
 
 

@@ -54,10 +54,11 @@ class KPICalculator:
         monthly_churn_rate = self._compute_churn_rate(df)
 
         latest_month = monthly_revenue.index.max()
+        _arpu_val = monthly_arpu.get(latest_month, 0.0)
         snapshot = KPISnapshot(
             mrr=float(monthly_revenue.get(latest_month, 0.0)),
             active_subscribers=int(monthly_active.get(latest_month, 0)),
-            arpu=float(monthly_arpu.get(latest_month, 0.0) or 0.0),
+            arpu=float(_arpu_val) if not pd.isna(_arpu_val) else 0.0,
             monthly_churn_rate=float(monthly_churn_rate.get(latest_month, 0.0)),
             total_revenue=float(df["transaction_amount"].sum()),
             avg_transaction_value=float(df["transaction_amount"].mean()),

@@ -3,6 +3,7 @@
 > Transform raw subscription transaction data into predictive retention intelligence — churn risk scores, CLV projections, cohort analysis, revenue forecasts, and AI-generated executive summaries.
 
 [![CI](https://github.com/FomkaHamilton/churn-intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/FomkaHamilton/churn-intelligence-platform/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](https://github.com/FomkaHamilton/churn-intelligence-platform)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
@@ -112,13 +113,28 @@ Instead of leaving analysts to interpret charts and numbers themselves, this pha
 
 ---
 
-### Phases 7–9 — What's coming
+### Phase 7 — Full Dashboard
 
-| Phase | Plain-English Summary |
-|---|---|
-| **7 — Full Dashboard** | Polish all pages into a cohesive product experience with navigation state management and export capabilities (CSV/PDF). |
-| **8 — Hardening** | Push test coverage above 80%, add integration tests that run the full pipeline end-to-end, and profile performance on large datasets. |
-| **9 — Portfolio Polish** | Architecture diagrams, annotated screenshots, a project walkthrough doc, and a live demo link. |
+**What it is:** Assembling all six analytics pages into a coherent product experience.
+
+Phase 7 delivered the complete Streamlit multi-page application: navigation sidebar with state persistence across pages, polished Plotly chart layouts, download buttons for CSV exports (at-risk customers, CLV projections, full scored dataset) and a formatted PDF executive briefing, and an overview landing page that reads the session state to surface a live health summary before the user has trained any model.
+
+**Why it matters:** Analytics engineering is not just models and data pipelines — it is the user experience that wraps them. A technically correct model buried in a bad interface does not get used.
+
+---
+
+### Phase 8 — Testing & Hardening
+
+**What it is:** Verifying the platform can be trusted with real business data.
+
+- **94% test coverage** (gate: 80%) — 283 tests across unit, integration, and edge-case suites
+- **Two production bug fixes** discovered and resolved during test writing:
+  - `structlog.stdlib.add_logger_name` is incompatible with `PrintLoggerFactory` (no `.name` attribute) — removed from processor chain
+  - `fpdf2`'s built-in Helvetica font is Latin-1 only — added `_to_latin1_safe()` to normalize em-dashes, bullets, and smart quotes before PDF rendering
+- **18-stage end-to-end integration test** that runs the full business-logic pipeline on real sample data without Streamlit
+- **Security audit** (`pip-audit`) scoped to project dependencies — passes clean
+
+**Why it matters:** Software that is not tested is not reliable. A portfolio project with a test suite and a coverage badge shows that the engineer thinks about correctness, not just features.
 
 ---
 
@@ -219,31 +235,44 @@ Any value can be overridden via environment variable (e.g. `CHURN_WINDOW_DAYS=60
 
 ## Architecture
 
+### Data pipeline
+
+```mermaid
+flowchart LR
+    A["CSV / XLSX\nUpload"] --> B["UploadEngine\ntype · size · injection"]
+    B --> C["SchemaValidator\ncolumn mapping"]
+    C --> D["DateFormatDetector\nauto-detect + confirm"]
+    D --> E["DataQualityChecker\nnulls · dupes · future dates"]
+    E --> F["KPICalculator\nMRR · ARPU · churn rate"]
+    E --> G["CohortAnalyzer\nretention matrix"]
+    E --> H["RFMBuilder\nrecency · frequency · monetary"]
+    H --> I["ChurnLabelBuilder\ngap-based · leakage-safe"]
+    I --> J["FeatureMatrixBuilder\ntemporal train/test split"]
+    J --> K["ChurnModel\nLR + RF ensemble"]
+    K --> L["SHAPExplainer\nfeature importance"]
+    K --> M["CLVModel\nKaplan-Meier survival"]
+    K --> N["CustomerSegmenter\n5 segments"]
+    F --> O["ForecastingPipeline\n12-month horizon"]
+    K --> P["InsightClient\nexecutive briefing"]
+    P --> Q["Export\nCSV · PDF"]
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Streamlit Dashboard                    │
-│          (app.py + src/visualization/)                   │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-         ┌─────────────▼─────────────┐
-         │      Analytics Engine     │
-         │  feature_engineering/     │
-         │  analytics/               │
-         │  modeling/                │
-         │  forecasting/             │
-         └─────────────┬─────────────┘
-                       │
-         ┌─────────────▼─────────────┐
-         │       Data Layer          │
-         │  ingestion/  ---> CSV/XLSX│
-         │  preprocessing/           │
-         │  database/ ---> SQLite    │
-         └─────────────┬─────────────┘
-                       │
-         ┌─────────────▼─────────────┐
-         │      AI Insight Layer     │
-         │  Claude | OpenAI | Template│
-         └───────────────────────────┘
+
+### App routing
+
+```mermaid
+flowchart TD
+    A["app.py\nStreamlit entry"] --> B{"sidebar\nnavigation"}
+    B -->|Upload| C["pages/upload.py\nUploadEngine + Quality"]
+    B -->|Analytics| D["pages/analytics.py\nKPI + Cohort charts"]
+    B -->|Predictions| E["pages/predictions.py\nChurnModel + SHAP + CLV"]
+    B -->|Forecasting| F["pages/forecasting.py\nHolt-Winters / Prophet"]
+    B -->|Insights| G["pages/insights.py\nAI Executive Briefing"]
+    C -->|"st.session_state"| H[("df_clean\nrfm_result\nlabel_result\nkpi_snapshot")]
+    H --> D
+    H --> E
+    E -->|"st.session_state"| I[("model\npredictions\nclv_result\nsegments")]
+    I --> F
+    I --> G
 ```
 
 ---
@@ -274,8 +303,8 @@ churn-intelligence-platform/
 │   └── database/             # SQLite session persistence
 │
 ├── tests/
-│   ├── unit/                 # 212 unit tests across all modules
-│   ├── integration/          # end-to-end pipeline tests (Phase 8)
+│   ├── unit/                 # 264 unit tests across all modules
+│   ├── integration/          # 18-stage end-to-end pipeline test
 │   └── fixtures/             # synthetic data factories
 │
 └── data/
@@ -299,7 +328,7 @@ make sample-data    # regenerate synthetic demo dataset
 make audit          # pip-audit security scan
 ```
 
-**Test suite:** 212 unit tests, all passing.
+**Test suite:** 283 tests (unit + integration), all passing. Coverage: 94%.
 
 ---
 
@@ -313,9 +342,9 @@ make audit          # pip-audit security scan
 | 4 — ML Layer | ✅ Complete | Temporal train/test split, LR+RF ensemble, SHAP, Kaplan-Meier CLV, segmentation |
 | 5 — Forecasting | ✅ Complete | Holt-Winters + Prophet forecasters, 12-month revenue/subscriber projections |
 | 6 — AI Insights | ✅ Complete | Template + LLM insight clients, structured report, automatic cache invalidation |
-| 7 — Dashboard | ⏳ Planned | Full multi-page polish, state management, export capabilities |
-| 8 — Hardening | ⏳ Planned | 80%+ coverage, integration tests, performance profiling |
-| 9 — Portfolio Polish | ⏳ Planned | Architecture diagrams, annotated screenshots, live demo |
+| 7 — Dashboard | ✅ Complete | Full multi-page polish, state management, CSV + PDF exports |
+| 8 — Hardening | ✅ Complete | 94% coverage (283 tests), 18-stage integration test, pip-audit clean |
+| 9 — Portfolio Polish | ✅ Complete | Mermaid architecture diagrams, annotated screenshots, deployment config |
 
 ---
 

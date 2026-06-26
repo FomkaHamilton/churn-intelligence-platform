@@ -188,6 +188,18 @@ python data/sample/generator.py
 
 ---
 
+## Deploy to Streamlit Community Cloud
+
+1. Fork this repository to your GitHub account.
+2. Go to [share.streamlit.io](https://share.streamlit.io) and connect your fork.
+3. Set **Main file path** to `app.py`.
+4. In **App Settings → Secrets**, paste the contents of `.streamlit/secrets.toml.example` and fill in your values (API keys are optional — the platform works in template mode without them).
+5. Click **Deploy**.
+
+The app uses Pydantic settings (`src/config/settings.py`) which reads from environment variables. Streamlit Cloud injects `st.secrets` values as environment variables automatically, so no code change is needed to move from local `.env` to cloud secrets.
+
+---
+
 ## Input format
 
 Three columns are required:

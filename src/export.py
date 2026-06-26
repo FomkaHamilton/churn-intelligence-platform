@@ -84,6 +84,24 @@ def _strip_md(text: str) -> str:
     return text
 
 
+_LATIN1_MAP = str.maketrans({
+    "—": "-",   # em dash
+    "–": "-",   # en dash
+    "•": "*",   # bullet
+    "·": "*",   # middle dot
+    "‘": "'",   # left single quote
+    "’": "'",   # right single quote
+    "“": '"',   # left double quote
+    "”": '"',   # right double quote
+    "…": "...", # ellipsis
+})
+
+
+def _to_latin1_safe(text: str) -> str:
+    """Replace non-Latin-1 Unicode characters with ASCII equivalents for fpdf2's built-in fonts."""
+    return text.translate(_LATIN1_MAP)
+
+
 def build_insights_pdf(report: "InsightReport", generated_at: str) -> bytes:
     """Render an InsightReport as a formatted PDF and return the raw bytes."""
     from fpdf import FPDF
@@ -117,13 +135,13 @@ def build_insights_pdf(report: "InsightReport", generated_at: str) -> bytes:
         pdf.cell(0, 9, title, new_x="LMARGIN", new_y="NEXT", fill=True)
         pdf.ln(3)
         pdf.set_font("Helvetica", "", 10)
-        for line in _strip_md(body).splitlines():
+        for line in _to_latin1_safe(_strip_md(body)).splitlines():
             line = line.strip()
             if not line:
                 pdf.ln(3)
             elif line.startswith("- "):
                 pdf.set_x(pdf.l_margin + 4)
-                pdf.multi_cell(0, 6, f"•  {line[2:]}")
+                pdf.multi_cell(0, 6, f"*  {line[2:]}")
             else:
                 pdf.multi_cell(0, 6, line)
         pdf.ln(6)

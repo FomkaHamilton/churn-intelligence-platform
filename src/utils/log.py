@@ -28,7 +28,6 @@ def configure_logging(log_level: str = "INFO") -> None:
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="ISO", utc=True),
-        structlog.stdlib.add_logger_name,
     ]
 
     if log_level.upper() == "DEBUG":

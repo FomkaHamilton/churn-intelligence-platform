@@ -28,6 +28,7 @@ def render_insights_tab(settings) -> None:
         return
 
     churn_window = int(st.session_state["churn_window_days"])
+    st.caption(f"📊 Computed with a **{churn_window}-day** churn window — adjust in ⚙️ Settings")
     model_results = st.session_state.get("model_results")
 
     with st.spinner("Assembling insights…"):

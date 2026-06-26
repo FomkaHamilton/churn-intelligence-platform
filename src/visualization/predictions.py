@@ -134,6 +134,26 @@ def render_at_risk_table(
     )
 
 
+def render_clv_distribution(clv_per_customer: pd.DataFrame) -> None:
+    """Histogram of expected CLV across all customers."""
+    values = clv_per_customer["expected_clv"].clip(lower=0)
+    fig = go.Figure(go.Histogram(
+        x=values,
+        nbinsx=30,
+        marker_color="#4F8EF7",
+        opacity=0.85,
+        hovertemplate="CLV ~$%{x:.0f} — %{y} customers<extra></extra>",
+    ))
+    fig.update_layout(
+        **_LAYOUT_BASE,
+        height=260,
+        xaxis=dict(title="Expected CLV ($)", tickprefix="$"),
+        yaxis=dict(title="Customers"),
+        bargap=0.05,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
 def render_segment_distribution(segments: pd.Series) -> None:
     """Donut chart showing distribution of customer segments."""
     counts = segments.value_counts()

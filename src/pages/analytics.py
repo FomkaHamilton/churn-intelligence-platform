@@ -25,6 +25,7 @@ def render_analytics_page() -> None:
         return
 
     churn_window = int(st.session_state["churn_window_days"])
+    st.caption(f"📊 Computed with a **{churn_window}-day** churn window — adjust in ⚙️ Settings")
 
     with st.spinner("Computing KPIs…"):
         kpi_ts = compute_kpis(df)

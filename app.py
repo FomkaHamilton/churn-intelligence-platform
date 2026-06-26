@@ -84,6 +84,16 @@ with st.sidebar:
     ai_label = "✅ AI insights active" if _settings.has_ai_provider else "⚠️ Template mode"
     st.caption(ai_label)
 
+    st.divider()
+    st.caption("**Pipeline progress**")
+    _steps = [
+        ("📂 Data loaded", st.session_state.get("clean_df") is not None),
+        ("🤖 Model trained", st.session_state.get("model_results") is not None),
+        ("💡 Insights ready", st.session_state.get("insights_report") is not None),
+    ]
+    for _label, _done in _steps:
+        st.caption(f"{'✅' if _done else '⬜'} {_label}")
+
 # ── Page routing ──────────────────────────────────────────────────────────────
 if "🏠" in (page or ""):
     render_overview_page(_settings)

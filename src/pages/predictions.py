@@ -7,6 +7,7 @@ from src.export import build_at_risk_csv, build_clv_csv, build_full_predictions_
 from src.utils.log import get_logger
 from src.visualization.predictions import (
     render_at_risk_table,
+    render_clv_distribution,
     render_model_metrics,
     render_roc_curve,
     render_segment_distribution,
@@ -65,6 +66,7 @@ def _train_model_pipeline(df: pd.DataFrame, churn_window_days: int) -> None:
             "rfm_features": fm.rfm_features,
             "clv": clv_result,
             "segments": segments,
+            "churn_window_days": churn_window_days,
             "split_info": {
                 "n_train": len(split.X_train),
                 "n_test": len(split.X_test),
@@ -108,6 +110,15 @@ def render_predictions_page() -> None:
         return
 
     split_info = model_results["split_info"]
+    trained_window = model_results.get("churn_window_days", churn_window)
+    if trained_window != churn_window:
+        st.warning(
+            f"⚠️ Model was trained with a **{trained_window}-day** churn window but the "
+            f"sidebar is now set to **{churn_window} days**. Click **Retrain Model** to realign.",
+            icon="🔄",
+        )
+    else:
+        st.caption(f"📊 Trained with a **{trained_window}-day** churn window — adjust in ⚙️ Settings")
     st.caption(
         f"Trained on {split_info['n_train']:,} customers · "
         f"Test cutoff: {split_info['cutoff_date'].date()} · "
@@ -164,6 +175,10 @@ def render_predictions_page() -> None:
             mime="text/csv",
             use_container_width=True,
         )
+
+    st.divider()
+    st.markdown("#### CLV Distribution")
+    render_clv_distribution(model_results["clv"].clv_per_customer)
 
     st.divider()
     col_export, col_retrain = st.columns([3, 1])

@@ -147,7 +147,7 @@ Phase 7 delivered the complete Streamlit multi-page application: navigation side
 ## Technical features
 
 | Capability | Description | Technology |
-|---|---|---|
+| --- | --- | --- |
 | Data Ingestion | CSV/XLSX upload with schema validation and quality profiling | Pandas, Pydantic |
 | Cohort Analysis | Monthly retention matrices, MRR trends, ARPU time series | Pandas, Plotly |
 | Churn Prediction | LR + RF ensemble with SHAP explainability | scikit-learn, SHAP |
@@ -160,7 +160,7 @@ Phase 7 delivered the complete Streamlit multi-page application: navigation side
 
 ## Quick start
 
-**Option A — Docker (recommended)**
+### Option A — Docker (recommended)
 
 ```bash
 cp .env.example .env        # add your API key if you want AI insights (optional)
@@ -168,7 +168,7 @@ docker compose up
 # open http://localhost:8501
 ```
 
-**Option B — Local Python**
+### Option B — Local Python
 
 ```bash
 git clone https://github.com/FomkaHamilton/churn-intelligence-platform.git
@@ -196,15 +196,9 @@ python data/sample/generator.py
 
 ## Screenshots
 
-| Upload + Quality | Cohort Retention | Churn Predictions |
-|---|---|---|
-| ![Upload page](docs/screenshots/01_upload_quality.png) | ![Cohort heatmap](docs/screenshots/03_cohort_heatmap.png) | ![Predictions](docs/screenshots/04_churn_predictions.png) |
+Screenshots will be added after the Streamlit Community Cloud deployment is live. The capture guide and annotation instructions (using Pillow) are in [docs/screenshots/](docs/screenshots/).
 
-| CLV + Segments | 12-Month Forecast | AI Executive Briefing |
-|---|---|---|
-| ![CLV segments](docs/screenshots/05_clv_segments.png) | ![Forecast](docs/screenshots/06_forecast.png) | ![AI briefing](docs/screenshots/07_ai_briefing.png) |
-
-> Screenshots captured with the built-in 2,000-customer sample dataset. See [docs/screenshots/](docs/screenshots/) for the full set.
+Pages covered: Upload + Quality Report, KPI Trends, Cohort Retention Heatmap, Churn Predictions + SHAP, CLV + Segments, 12-Month Forecast, AI Executive Briefing, PDF Export.
 
 ---
 
@@ -225,7 +219,7 @@ The app uses Pydantic settings (`src/config/settings.py`) which reads from envir
 Three columns are required:
 
 | Column | Type | Example |
-|---|---|---|
+| --- | --- | --- |
 | `customer_id` | string | `CUST-00123` |
 | `transaction_date` | date | `2024-03-15` |
 | `transaction_amount` | decimal | `49.99` |
@@ -233,7 +227,7 @@ Three columns are required:
 Optional enrichment columns:
 
 | Column | What it unlocks |
-|---|---|
+| --- | --- |
 | `subscription_id` | Subscription-level analysis |
 | `country` | Geographic segmentation |
 | `product` | Product-tier breakdown |
@@ -311,7 +305,7 @@ flowchart TD
 
 ## Repository structure
 
-```
+```text
 churn-intelligence-platform/
 ├── app.py                    # Streamlit entry point (all pages)
 ├── Makefile                  # make install | run | test | lint | audit
@@ -367,7 +361,7 @@ make audit          # pip-audit security scan
 ## Build progress
 
 | Phase | Status | What was built |
-|---|---|---|
+| --- | --- | --- |
 | 1 — Foundation | ✅ Complete | Repo scaffold, Pydantic config, structured logging, GitHub Actions CI, Docker |
 | 2 — Data Layer | ✅ Complete | Upload engine, schema normalisation, date parser, quality checker, sample generator |
 | 3 — Analytics Layer | ✅ Complete | RFM features, churn labels (leakage-protected), cohort retention matrix, KPI time series |
@@ -399,6 +393,9 @@ SMOTE (synthetic oversampling) generates artificial data points which can introd
 
 **Why no Prophet by default?**
 Prophet requires C++ build tools which can fail silently on Windows. Making it optional (in `requirements-optional.txt`) means the platform works out of the box on every OS while still supporting Prophet via a config flag for users who want seasonal modelling.
+
+**Why are `src/pages/` and `src/visualization/` excluded from coverage measurement?**
+Both packages import Streamlit at the module level and call `st.plotly_chart`, `st.metric`, `st.dataframe`, and similar rendering primitives. These functions require a live Streamlit server context — they cannot be invoked in a pytest session without mocking the entire Streamlit runtime, which tests the mock rather than the code. All the business logic those pages *display* (RFM scores, churn probabilities, SHAP values, CLV projections) is fully tested in the underlying `analytics/`, `modeling/`, `forecasting/`, and `insights/` modules. Excluding pure rendering wrappers from coverage is standard practice — equivalent to omitting Django HTML templates or React components from a Python backend coverage report. The omit is explicit in `pyproject.toml` so the decision is visible and documented.
 
 ---
 

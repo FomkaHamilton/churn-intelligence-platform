@@ -77,3 +77,6 @@ logs/
 
 # ── Local config overrides (keep base config, exclude local overrides) ────────
 config/settings.local.yaml
+
+# ── Shell redirect artifacts ───────────────────────────────────────────────────
+=*

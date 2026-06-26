@@ -3,7 +3,7 @@
 Screenshots of the live app running with the 2,000-customer sample dataset.
 
 | File | Page | What it shows |
-|---|---|---|
+| --- | --- | --- |
 | `01_upload_quality.png` | Upload | Successful ingestion + data quality report (row counts, null flags, severity badges) |
 | `02_kpi_trends.png` | Analytics | MRR, active subscribers, and churn rate time-series charts |
 | `03_cohort_heatmap.png` | Analytics | Cohort retention matrix — colour-coded heatmap with month-1 through month-12 retention rates |
@@ -20,6 +20,7 @@ With the app running locally (`streamlit run app.py`) and sample data loaded
 page listed above and save it here under the filename shown.
 
 To annotate (optional):
+
 ```python
 from PIL import Image, ImageDraw, ImageFont
 

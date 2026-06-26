@@ -27,6 +27,7 @@ This section explains each completed phase in plain language so anyone reviewing
 ---
 
 ### Phase 1 — The Foundation
+
 **What it is:** Setting up the "building" before the furniture goes in.
 
 Before writing a single line of analysis code, a professional engineer establishes the infrastructure that makes a project maintainable, reproducible, and safe to share publicly. This phase created:
@@ -42,6 +43,7 @@ Before writing a single line of analysis code, a professional engineer establish
 ---
 
 ### Phase 2 — The Data Layer
+
 **What it is:** Teaching the platform to safely accept and understand raw data files.
 
 A business uploads a CSV or Excel file of transaction records. This phase built everything that happens between "file dropped" and "data ready for analysis":
@@ -57,6 +59,7 @@ A business uploads a CSV or Excel file of transaction records. This phase built 
 ---
 
 ### Phase 3 — The Analytics Layer
+
 **What it is:** Computing the core business health metrics from transaction history.
 
 Once data is validated, this phase calculates the key indicators a subscription business uses to measure its health:
@@ -72,6 +75,7 @@ Once data is validated, this phase calculates the key indicators a subscription 
 ---
 
 ### Phase 4 — The Machine Learning Layer
+
 **What it is:** Training a model that predicts which specific customers are likely to leave.
 
 This phase moves from "describing what happened" to "predicting what will happen":
@@ -88,6 +92,7 @@ This phase moves from "describing what happened" to "predicting what will happen
 ---
 
 ### Phase 5 — The Forecasting Layer
+
 **What it is:** Projecting future revenue and subscriber counts 12 months ahead.
 
 Knowing who churned is useful. Knowing how much revenue the business will generate next quarter is what the CFO needs for planning. This phase built a time-series forecasting system that:
@@ -100,6 +105,7 @@ Knowing who churned is useful. Knowing how much revenue the business will genera
 ---
 
 ### Phase 6 — The AI Insight Layer
+
 **What it is:** Converting raw analytics into a plain-language executive briefing.
 
 Instead of leaving analysts to interpret charts and numbers themselves, this phase generates a structured written summary of the business's retention health. The report covers five areas: business health overview, churn driver analysis, revenue outlook, customer segment breakdown, and specific recommended actions — all written in plain English with concrete numbers.
@@ -185,6 +191,20 @@ To regenerate the sample data:
 python data/sample/generator.py
 # creates data/sample/subscriptions_sample.csv (~22k rows, 2,000 customers)
 ```
+
+---
+
+## Screenshots
+
+| Upload + Quality | Cohort Retention | Churn Predictions |
+|---|---|---|
+| ![Upload page](docs/screenshots/01_upload_quality.png) | ![Cohort heatmap](docs/screenshots/03_cohort_heatmap.png) | ![Predictions](docs/screenshots/04_churn_predictions.png) |
+
+| CLV + Segments | 12-Month Forecast | AI Executive Briefing |
+|---|---|---|
+| ![CLV segments](docs/screenshots/05_clv_segments.png) | ![Forecast](docs/screenshots/06_forecast.png) | ![AI briefing](docs/screenshots/07_ai_briefing.png) |
+
+> Screenshots captured with the built-in 2,000-customer sample dataset. See [docs/screenshots/](docs/screenshots/) for the full set.
 
 ---
 

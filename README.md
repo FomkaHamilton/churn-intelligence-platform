@@ -171,8 +171,8 @@ No Python, Git, or Docker required. Everything runs in the browser.
 1. Click **Code → Codespaces → Create codespace on master** on the GitHub repo page.
 2. Wait ~2 minutes for the environment to build (installs all dependencies automatically).
 3. When the terminal is ready, run `streamlit run app.py`.
-4. Codespaces will pop up a notification: **"Your application running on port 8501 is available."** Click **Open in Browser**.
-5. On the Upload page, click **Load sample dataset** — the full app loads immediately with 2,000 synthetic customers. No file to prepare.
+4. A notification will appear at the bottom-right: **"Your application running on port 8501 is available."** Click **Open in Browser**.
+5. In the sidebar, click **📤 Upload Data**. Then click **🎲 Load sample dataset instead** — the full app loads immediately with 2,000 synthetic customers. No file to prepare.
 
 > The `.devcontainer/devcontainer.json` configures Python 3.11, all dependencies, and the Streamlit port automatically.
 
@@ -200,11 +200,13 @@ Fork the repo and get a public URL in under 5 minutes.
 git clone https://github.com/FomkaHamilton/churn-intelligence-platform.git
 cd churn-intelligence-platform
 
-cp .env.example .env         # leave API keys blank — template mode works without them
+cp .env.example .env         # required — Docker Compose reads this file; API keys inside are optional
 docker compose up --build
 ```
 
 Open [http://localhost:8501](http://localhost:8501). The first build takes ~3 minutes; subsequent starts are instant.
+
+> **Note:** The `cp` step is required even if you leave all API keys blank. `docker compose` will error if `.env` does not exist.
 
 To stop: `Ctrl+C`, then `docker compose down`.
 
@@ -214,46 +216,60 @@ To stop: `Ctrl+C`, then `docker compose down`.
 
 **Prerequisites:** Python 3.11 or 3.12, Git.
 
+**1. Clone and create a virtual environment:**
+
 ```bash
 git clone https://github.com/FomkaHamilton/churn-intelligence-platform.git
 cd churn-intelligence-platform
-
 python -m venv .venv
+```
 
-# Mac / Linux:
+**2. Activate the virtual environment** — pick the command for your shell:
+
+```bash
+# Mac / Linux
 source .venv/bin/activate
-# Windows (PowerShell):
+```
+
+```powershell
+# Windows — PowerShell
 .venv\Scripts\Activate.ps1
-# Windows (Command Prompt):
+```
+
+```bat
+# Windows — Command Prompt
 .venv\Scripts\activate.bat
+```
 
+**3. Install dependencies and run:**
+
+```bash
 pip install -r requirements.txt
-
-cp .env.example .env         # leave API keys blank for template mode
+cp .env.example .env         # API keys inside are optional; file must exist
 streamlit run app.py
 ```
 
 Open [http://localhost:8501](http://localhost:8501).
 
-> **Windows note:** If `Activate.ps1` is blocked by execution policy, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` in PowerShell first.
+> **Windows PowerShell note:** If `Activate.ps1` is blocked, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` in PowerShell once, then retry.
 
 ---
 
 ### First steps once the app is open
 
-The app works best when followed in order — each page feeds state into the next.
+All navigation is in the **left sidebar**. Follow the pages in order — each one feeds data into the next.
 
-1. **Upload** — Click **Load sample dataset** (top of the page). This loads 2,000 synthetic customers and 22,000+ transactions instantly. You can also upload your own CSV (three required columns: `customer_id`, `transaction_date`, `transaction_amount`).
+1. **📤 Upload Data** — Click **🎲 Load sample dataset instead** (below the file uploader). This loads 2,000 synthetic customers and 22,000+ transactions instantly. To use your own data, upload a CSV with three columns: `customer_id`, `transaction_date`, `transaction_amount`.
 
-2. **Analytics** — Review the KPI dashboard (MRR, active subscribers, ARPU, churn rate) and the cohort retention heatmap. No action needed — this page auto-computes when data is loaded.
+2. **📈 Analytics** — Navigate here from the sidebar. KPI trends (MRR, ARPU, churn rate) and the cohort retention heatmap appear automatically. No button to click.
 
-3. **Predictions** — Click **Train Model**. This runs the full ML pipeline (~10 seconds on sample data): churn prediction, SHAP explainability, Kaplan-Meier CLV, and customer segmentation. Results persist across page navigations.
+3. **🤖 Predictions** — Click **🚀 Train Churn Model**. This runs the full ML pipeline (~10 seconds on sample data): churn prediction, SHAP explainability, Kaplan-Meier CLV, and customer segmentation. Results persist across page navigations.
 
-4. **Forecasting** — Displays a 12-month revenue and subscriber projection automatically after the model is trained.
+4. **🔮 Forecasting** — A 12-month revenue and subscriber projection appears automatically once the model has been trained.
 
-5. **Insights** — Click **Generate Insights** (or **Regenerate**) for a plain-language executive briefing. Uses template mode by default; add `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to `.env` for AI-written narratives.
+5. **💡 Insights** — The executive briefing generates automatically on your first visit. Click **🔄 Regenerate Insights** to refresh it (for example, after changing the churn window in Settings). Uses template mode by default; add `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to `.env` for AI-written narratives.
 
-6. **Export** — Download buttons appear on the Predictions page (CSV: at-risk list, CLV projections, full scored dataset) and the Insights page (PDF executive briefing).
+6. **Export** — Download buttons appear at the bottom of the Predictions page (CSV: at-risk list, CLV projections, full scored dataset) and the Insights page (PDF executive briefing).
 
 ---
 

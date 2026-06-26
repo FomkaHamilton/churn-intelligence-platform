@@ -405,6 +405,7 @@ Prophet requires C++ build tools which can fail silently on Windows. Making it o
 ## Changelog
 
 ### v0.6.0 — Phase 6: AI Insight Layer
+
 - Added `src/insights/` package: `InsightData`, `InsightReport` data contracts, `BaseInsightClient` ABC, `TemplateInsightClient`, `get_insight_client()` factory
 - Added `src/visualization/insights.py`: full Insights page renderer with health colour-coding
 - Added live Insights page to `app.py` with Regenerate button and template/AI mode banner
@@ -413,6 +414,7 @@ Prophet requires C++ build tools which can fail silently on Windows. Making it o
 - Fixed SHAP feature name column access (`feature_importance["feature_name"]` not `.index`)
 
 ### v0.6.1 — Pre-Phase 7 audit fixes
+
 - **CLV bug fix** (`src/modeling/clv.py`): Active customers who exceed median lifetime now floor at 30 days remaining (1 month) instead of $0. Long-tenured paying customers were incorrectly showing zero CLV.
 - **PII warning** (`src/visualization/predictions.py`): At-risk table now detects email-address-format customer IDs and displays a privacy notice before rendering.
 - **Overview page logic** (`app.py` line ~208): Fixed double-negation `not X is not None` (always True) to the intended `X is not None`. Success banner now correctly shows only when data is loaded.
@@ -420,6 +422,30 @@ Prophet requires C++ build tools which can fail silently on Windows. Making it o
 - **Insights cache invalidation** (`app.py`): `insights_report` now clears automatically when new data is uploaded or the model is retrained. A warning banner appears when the churn window changes while cached insights exist.
 - **Recency transparency** (`app.py`): Added a caption below the SHAP importance chart explaining why recency ranks first by design.
 - **Sample data** (`data/sample/`): Generated `subscriptions_sample.csv` (2,000 customers, 22,856 rows) so the demo works out of the box. Fixed month-boundary overflow bug in `generator.py`.
+
+### v0.7.0 — Phase 7: Full Dashboard
+
+- Completed all six Streamlit pages: Upload, Analytics, Predictions, Forecasting, Insights, Overview
+- Added `build_at_risk_csv`, `build_clv_csv`, `build_full_predictions_csv`, `build_insights_pdf` export functions (`src/export.py`)
+- Navigation sidebar with session state persistence across page transitions
+- Overview page surfaces live health KPIs before the model is trained
+
+### v0.8.0 — Phase 8: Testing & Hardening
+
+- **94% test coverage** (283 tests) — coverage gate set to 80% in `pyproject.toml`
+- Added 71 new tests: `test_export.py`, `test_log.py`, `test_clv.py`, `test_explainability.py`, plus gap tests in `test_temporal_split.py` and `test_template_insights.py`
+- Added 18-stage end-to-end integration test (`tests/integration/test_full_pipeline.py`)
+- **Bug fix**: removed `structlog.stdlib.add_logger_name` from processor chain — incompatible with `PrintLoggerFactory` (caused `AttributeError` at runtime and test-session poisoning)
+- **Bug fix**: added `_to_latin1_safe()` + `_LATIN1_MAP` in `src/export.py` — fpdf2 built-in fonts are Latin-1 only; em-dash, bullet, and smart quotes previously caused `UnicodeEncodeError` in PDF export
+- Scoped `pip-audit` to project requirements (not pip itself) — audit now passes clean
+
+### v0.9.0 — Phase 9: Portfolio Polish
+
+- Two Mermaid architecture diagrams in README (data pipeline + app routing), renders natively on GitHub
+- `docs/screenshots/` directory with 8-screenshot manifest and Pillow annotation guide
+- `.streamlit/config.toml` (theme, XSRF protection, upload cap) for Streamlit Community Cloud
+- `.streamlit/secrets.toml.example` — cloud secrets template; Pydantic settings reads them as env vars automatically
+- Coverage badge (94%), deployment instructions, screenshots section added to README
 
 ---
 
